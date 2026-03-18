@@ -1,0 +1,17 @@
+# Video Info
+fps	30.0000
+frame_width	640
+frame_height	480
+start_time_str	00:00:00
+end_time_str	00:00:10
+
+# Scale
+pixel_to_mm	0.09225831
+
+# Arenas
+id	shape	category	geom
+A1	rect	arena	[-3, -6, 416, 435]
+
+# Stimulus Areas
+id	shape	category	geom
+S1	circle	stim	[308, 328, 100]
