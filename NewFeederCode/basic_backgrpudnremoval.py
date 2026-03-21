@@ -1,13 +1,9 @@
 import cv2
 import numpy as np
 import math
-"""
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_1000)
-aruco_params = cv2.aruco.DetectorParameters()
-detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
-"""
+
 w, h = 400, 300
-cap = cv2.VideoCapture("feed_clip_0001.mp4")
+cap = cv2.VideoCapture("test1.mp4")
 
 # Get total number of frames for the seek bar
 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -31,8 +27,7 @@ create_win("5. Threshold", 720, 350)
 create_win("6. Opened (Cleaned)", 1130, 350)
 create_win("7. Final Mask (Closed)", 720, 700)
 create_win("8. Histogram", 1130, 700) # New window for Histogram
-create_win("9. Zoom View", 310, 700, 400, 300) # Positioned near the Final Mask
-create_win("10. Aruco View", 720, 700, 400, 300)
+create_win("9. Multi ArUco View", 310, 700, 400, 400)
 def nothing(x): pass
 
 # --- TIME CONTROL TRACKBAR ---
@@ -48,14 +43,11 @@ cv2.createTrackbar("Close Power", "0. Controls", 2, 10, nothing)
 cv2.createTrackbar("Box Width", "0. Controls", 200, 300, nothing)
 cv2.createTrackbar("Box Height", "0. Controls", 200, 300, nothing)
 cv2.createTrackbar("Show Contour", "0. Controls", 1, 1, nothing)
-
-# --- NEW: ARUCO TRACKBARS ---
+cv2.createTrackbar("Min Area", "0. Controls", 500, 5000, nothing)
 cv2.createTrackbar("ArUco Min Size", "0. Controls", 30, 200, nothing)
 cv2.createTrackbar("ArUco Max Size", "0. Controls", 400, 1000, nothing)
 
-# --- NEW: ARUCO DICTIONARY SETUP ---
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_1000)
-
 first_gray = cv2.cvtColor(first_frame, cv2.COLOR_BGR2GRAY)
 
 while True:
@@ -78,6 +70,7 @@ while True:
     op_p = cv2.getTrackbarPos("Open Power", "0. Controls")
     cl_k = max(1, cv2.getTrackbarPos("Close Kernel", "0. Controls"))
     cl_p = cv2.getTrackbarPos("Close Power", "0. Controls")
+    min_area = cv2.getTrackbarPos("Min Area", "0. Controls")
 
     first_blur = cv2.GaussianBlur(first_gray, (b_size, b_size), 0)
     
@@ -97,10 +90,10 @@ while True:
     cv2.normalize(log_hist, log_hist, 0, 255, cv2.NORM_MINMAX)
     
     for i in range(1, 256):
-        # We use the log_hist values now for drawing
-        pt1 = (i - 1, 300 - int(log_hist[i-1]))
-        pt2 = (i, 300 - int(log_hist[i]))
+        pt1 = (i - 1, 300 - int(log_hist[i-1].item()))
+        pt2 = (i, 300 - int(log_hist[i].item()))
         cv2.line(hist_canvas, pt1, pt2, (255, 255, 255), 2)
+
         
     # Draw a vertical line where the current Threshold trackbar is set
     cv2.line(hist_canvas, (t_val, 0), (t_val, 300), (0, 0, 255), 1)
@@ -111,16 +104,18 @@ while True:
     closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel_close, iterations=cl_p)
 
     contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    if contours:
-        largest_contour = max(contours, key=cv2.contourArea)
+    # List to store individual bee crops for the combined view
+    bee_crops_list = []
+    for cnt in contours:
+        if cv2.contourArea(cnt) < min_area:
+            continue
 
         show_contour = cv2.getTrackbarPos("Show Contour", "0. Controls")
         if show_contour == 1:
             # -1 draws all points of the contour, (255, 255, 0) is Cyan, thickness is 1
-            cv2.drawContours(frame, [largest_contour], -1, (255, 255, 0), 1)
+            cv2.drawContours(frame, [cnt], -1, (255, 255, 0), 1)
 
-        M = cv2.moments(largest_contour)
+        M = cv2.moments(cnt)
         if M["m00"] != 0:
             cx, cy = int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])
             
@@ -138,7 +133,7 @@ while True:
                 bee_crop = frame[y1:y2, x1:x2]
                 bee_crop_gray = cv2.cvtColor(bee_crop, cv2.COLOR_BGR2GRAY)
                 #bee_crop_norm = cv2.normalize(bee_crop_gray, None, 0, 255, cv2.NORM_MINMAX)
-                scale_factor = 3
+                scale_factor = 1
                 zoom_view = cv2.resize(bee_crop, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_LINEAR)
                 zoom_for_aruco = cv2.resize(bee_crop_gray, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_LANCZOS4)
                 
@@ -170,9 +165,14 @@ while True:
 
                 cv2.imshow("9. Zoom View", zoom_view)
                 cv2.imshow("10. Aruco View", aruco_display) # Changed to show the drawn image
-
-            # Draw the box on the original frame
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                bee_crops_list.append(aruco_display)
+                # Draw the box on the original frame
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    # Combine all bee crops into one display window (Tiled)
+    if bee_crops_list:
+        # Create a grid or stack of crops
+        multi_view = np.vstack(bee_crops_list[:4]) if len(bee_crops_list) <= 4 else np.vstack(bee_crops_list[:4])
+        cv2.imshow("9. Multi ArUco View", multi_view)
 
     if is_paused:
         cv2.putText(frame, "PAUSED", (w-120, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
