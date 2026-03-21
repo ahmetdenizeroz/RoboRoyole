@@ -33,23 +33,31 @@ unsigned long holdStartTime = 0;
 unsigned long holdDuration = 10000UL; 
 
 // ------------------- SENSOR THRESHOLDS -------------------
-int THRESHOLD_BACK   = 512;
-int THRESHOLD_MIDDLE = 512;
-int THRESHOLD_FRONT  = 512;
+int THRESHOLD_BACK   = 500;
+int THRESHOLD_MIDDLE = 250;
+int THRESHOLD_FRONT  = 200;
 
-int HYSTERISIS_BACK = 0
-int HYSTERISIS_MIDDLE = 0
-int HYSTERISIS_FRONT = 0
+int HYSTERISIS_BACK = 30;
+int HYSTERISIS_MIDDLE = 30;
+int HYSTERISIS_FRONT = 30;
 
-int B_TRIGGER = THRESHOLD_BACK + 60 ;
-int M_TRIGGER = THRESHOLD_MIDDLE + 65; 
-int F_TRIGGER = THRESHOLD_FRONT + 100; 
+int B_TRIGGER = THRESHOLD_BACK +  HYSTERISIS_BACK;
+int M_TRIGGER = THRESHOLD_MIDDLE + HYSTERISIS_MIDDLE; 
+int F_TRIGGER = THRESHOLD_FRONT + HYSTERISIS_FRONT; 
 
 bool bOn = false; bool mOn = false; bool fOn = false; 
 
 String serialBuffer = "";
 const int MAX_SERIAL_BUFFER = 20;
 bool isMotorEnabled = false;
+
+// --- DYNAMIC ENVELOPE VARIABLES ---
+long numberOfSteps = 0;
+long margin = 100; 
+long ejectStartPos = 0;
+long retractStartPos = 0;
+long lastWaitPos = 0;
+bool wasSoftStop = false; // Flag to disable refill if sensor failed
 
 void setup() {
   Serial.begin(115200);
@@ -59,10 +67,10 @@ void setup() {
   pinMode(ENABLE_PIN, OUTPUT);
   digitalWrite(ENABLE_PIN, HIGH);      
   pinMode(FRONT_STOP_PIN, INPUT_PULLUP);
-  pinMode(BACK_STOP_PIN,  INPUT_PULLUP);
-  pinMode(ELECTRODE_PIN_BACK,   INPUT);
+  pinMode(BACK_STOP_PIN,   INPUT_PULLUP);
+  pinMode(ELECTRODE_PIN_BACK,    INPUT);
   pinMode(ELECTRODE_PIN_MIDDLE, INPUT);
-  pinMode(ELECTRODE_PIN_FRONT,  INPUT);
+  pinMode(ELECTRODE_PIN_FRONT,   INPUT);
   Serial.println("Feeder Ready");
 }
 
@@ -87,19 +95,28 @@ void runStateMachine() {
       break;
 
     case WAITING:
+      // Adjust numberOfSteps based on manual sensor-seeking movement
+      if (numberOfSteps > 0) {
+        long currentWaitPos = stepper.currentPosition();
+        if (currentWaitPos != lastWaitPos) {
+          numberOfSteps -= (currentWaitPos - lastWaitPos);
+          lastWaitPos = currentWaitPos;
+        }
+      }
+      
       if (bOn && !mOn && !fOn) {
         stepper.stop();
         stepper.setCurrentPosition(stepper.currentPosition());
         disableMotor(); 
       }
       else if (!bOn && !mOn && !fOn) {
-        Serial.println("Back Lost, Ejecting"); // RESTORED
+        //Serial.println("Back Lost, Ejecting"); // RESTORED
         enableMotor();
         stepper.setSpeed(stepper.maxSpeed());
         stepper.runSpeed();
       }
       else {
-        Serial.println("Middle/Front ON, Retracting"); // RESTORED
+        //Serial.println("Middle/Front ON, Retracting"); // RESTORED
         enableMotor();
         stepper.setSpeed(-stepper.maxSpeed());
         stepper.runSpeed();
@@ -108,37 +125,44 @@ void runStateMachine() {
 
     case EJECTING:
       enableMotor();
-      if (bOn && mOn && fOn) {
-        Serial.println("STATUS: Full (B+M+F). Starting HOLD.");
-        state = HOLDING;
-        holdStartTime = millis();
-        stepper.stop();
-        stepper.setCurrentPosition(stepper.currentPosition());
-      } 
-      else {
-        stepper.moveTo(2000000000L); 
-        stepper.run();
+      {
+        long currentTravel = stepper.currentPosition() - ejectStartPos;
+        bool distLimitReached = (numberOfSteps > 0 && currentTravel >= (numberOfSteps + margin));
+        bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && mOn && fOn));
+
+        if (sensorsTriggered || distLimitReached) {
+          wasSoftStop = distLimitReached; // Record why we stopped
+          
+          if (wasSoftStop) Serial.println("STATUS: Soft Stop (Distance). Starting HOLD.");
+          else Serial.println("STATUS: Full (Sensors). Starting HOLD.");
+          
+          state = HOLDING;
+          holdStartTime = millis();
+          stepper.stop();
+          stepper.setCurrentPosition(stepper.currentPosition());
+        } 
+        else {
+          // Keep target very far to maintain full speed until logic triggers stop
+          stepper.moveTo(2000000000L); 
+          stepper.run();
+        }
       }
       break;
 
     case HOLDING:
       if (millis() - holdStartTime >= holdDuration) {
         Serial.println("STATUS: Hold time over. Retracting.");
+        retractStartPos = stepper.currentPosition();
         state = RETRACTING;
         return;
       }
       enableMotor(); 
-      if (bOn && mOn && !fOn) {
-         Serial.println("Front Lost Refill"); // RESTORED
+      // Only refill if we DID NOT stop via distance limit (sensor must be trusted)
+      if (!wasSoftStop && bOn && mOn && !fOn) {
+         //Serial.println("Front Lost Refill"); // RESTORED
          stepper.setSpeed(stepper.maxSpeed() / 2);
          stepper.runSpeed();
       }
-      /*
-      else if ((bOn && !mOn && fOn) || (!bOn && mOn && fOn) || (!bOn && !mOn && fOn)) {
-         //Serial.println("STATUS: Sensor Error/Bubble during Hold. Retracting."); // RESTORED
-         state = RETRACTING;
-      }
-      */
       else {
          stepper.stop();
          stepper.setCurrentPosition(stepper.currentPosition());
@@ -148,8 +172,13 @@ void runStateMachine() {
     case RETRACTING:
       enableMotor();
       if (bOn && !mOn && !fOn) {
+        // Record new calibration distance
+        numberOfSteps = abs(retractStartPos - stepper.currentPosition());
+        Serial.print("number_of_steps set: "); Serial.println(numberOfSteps);
+        
         Serial.println("STATUS: Retract Complete. Entering WAITING.");
         state = WAITING;
+        lastWaitPos = stepper.currentPosition();
         stepper.stop();
         stepper.setCurrentPosition(stepper.currentPosition());
       } 
@@ -167,6 +196,7 @@ void checkAutoFeedTimer() {
   if (now - lastAutoFeedTime >= autoFeedInterval) {
     if (state == IDLE || state == WAITING) {
       Serial.println("AUTO FEED: Triggered");
+      ejectStartPos = stepper.currentPosition();
       state = EJECTING;
       lastAutoFeedTime = now;
     } else {
@@ -287,6 +317,7 @@ void processCommand(String cmd) {
     case 'P': 
       if (state != HOLDING) {
         Serial.println("CMD: Feed Sequence Start"); // RESTORED
+        ejectStartPos = stepper.currentPosition();
         state = EJECTING;
         lastAutoFeedTime = millis(); 
       }
@@ -294,9 +325,11 @@ void processCommand(String cmd) {
     case 'W': 
       Serial.println("CMD: Waiting Mode Active"); // RESTORED
       state = WAITING; 
+      lastWaitPos = stepper.currentPosition();
       break;
     case 'L': 
       Serial.println("CMD: Force Retract"); // RESTORED
+      retractStartPos = stepper.currentPosition();
       state = RETRACTING; 
       break;
 
@@ -316,21 +349,18 @@ void processCommand(String cmd) {
     case 'T': 
       if (val >= 0 && val <= 1023) {
         THRESHOLD_BACK = val;
-        B_TRIGGER = THRESHOLD_BACK + 60 ;
         Serial.print("Thresh Back: "); Serial.println(val);
       }
       break;
     case 'U': 
       if (val >= 0 && val <= 1023) {
         THRESHOLD_MIDDLE = val;
-        M_TRIGGER = THRESHOLD_MIDDLE + 65; 
         Serial.print("Thresh Mid: "); Serial.println(val);
       }
       break;
     case 'I': 
       if (val >= 0 && val <= 1023) {
-        THRESHOLD_FRONT = val;
-        F_TRIGGER = THRESHOLD_FRONT + 100; 
+        THRESHOLD_FRONT = val; 
         Serial.print("Thresh Front: "); Serial.println(val);
       }
       break;
@@ -338,18 +368,21 @@ void processCommand(String cmd) {
     case 'G': 
       if (val >= 0 && val <= 1023) {
         HYSTERISIS_BACK = val;
+        B_TRIGGER = THRESHOLD_BACK +  HYSTERISIS_BACK;
         Serial.print("Hysterisis Back: "); Serial.println(val);
       }
       break;
     case 'H': 
       if (val >= 0 && val <= 1023) {
-        HYSTERISIS_MIDDLE = val;; 
+        HYSTERISIS_MIDDLE = val;
+        M_TRIGGER = THRESHOLD_MIDDLE +  HYSTERISIS_MIDDLE; 
         Serial.print("Hysterisis Mid: "); Serial.println(val);
       }
       break;
     case 'J': 
       if (val >= 0 && val <= 1023) {
         HYSTERISIS_FRONT = val;
+        F_TRIGGER = THRESHOLD_FRONT +  HYSTERISIS_FRONT;
         Serial.print("Hysterisis Front: "); Serial.println(val);
       }
       break;
@@ -359,6 +392,11 @@ void processCommand(String cmd) {
         holdDuration = val;
         Serial.print("Hold duration: "); Serial.println(val);
       }
+      break;
+    case 'X':
+      Serial.println("Soft Stop Margin set to");
+      Serial.println(val); // RESTORED
+      margin = val;
       break;
   }
 }

@@ -135,9 +135,9 @@ class FeederController(QObject):
             "threshold_1": 512,
             "threshold_2": 512,
             "threshold_3": 512,
-            "hysterisis_1": 600,
-            "hysterisis_2": 600,
-            "hysterisis_3": 600,
+            "hysterisis_1": 60,
+            "hysterisis_2": 60,
+            "hysterisis_3": 60,
             # Detection
             "allowed_ids": set([1, 2, 5, 6, 7, 8, 9, 10]),
             "min_size": 50,
@@ -145,6 +145,7 @@ class FeederController(QObject):
             "timeout_ms": 10000,  # Arduino timeout
             "entry_frames": 15,  # Python: consecutive frames to confirm entry
             "exit_frames": 30,  # Python: consecutive frames to confirm exit
+            "trigger_mode": "both",
             # Motor
             "motor_speed": 1000,
             "motor_accel": 500,
@@ -162,7 +163,7 @@ class FeederController(QObject):
             "close_power": 2,
             "box_width": 200,
             "box_height": 200,
-            "min_area" : 50
+            "min_area" : 2000
         }
 
         # --- New Frame-based Zone Logic ---
@@ -181,28 +182,28 @@ class FeederController(QObject):
         try:
             self.status_updated.emit(f"Opening camera index {index}...")
             self._log_to_file(f"Opening camera index {index}...")
-            self.cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            self.cap = cv2.VideoCapture("test.mp4")#, cv2.CAP_DSHOW)
             if not self.cap.isOpened():
                 raise Exception(f"Cannot open camera {index}.")
             
             # 1. Force MJPEG Compression to unblock USB bandwidth
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+            #self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
             # 2. Set Resolution (720p is often better for hitting 60fps on webcams)
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            #self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            #self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-            self.cap.set(cv2.CAP_PROP_BACKLIGHT, 0)
-            self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
+            #self.cap.set(cv2.CAP_PROP_BACKLIGHT, 0)
+            #self.cap.set(cv2.CAP_PROP_SETTINGS, 1)
 
             # 3. Request High FPS
             self.cap.set(cv2.CAP_PROP_FPS, 60)
 
             # Apply initial camera settings
-            self.set_exposure_lock(self.settings['exposure_lock'])
-            self.set_autofocus(self.settings['autofocus'])
-            if not self.settings['autofocus']:
-                self.set_focus(self.settings['focus'])
+            #self.set_exposure_lock(self.settings['exposure_lock'])
+            #self.set_autofocus(self.settings['autofocus'])
+            #if not self.settings['autofocus']:
+            #    self.set_focus(self.settings['focus'])
 
             self.is_processing = True
             self.processing_thread = threading.Thread(target=self._process_loop, daemon=True)
@@ -328,6 +329,7 @@ class FeederController(QObject):
         self._send_to_arduino(f"H{settings['hysterisis_2']}\n")
         self._send_to_arduino(f"J{settings['hysterisis_3']}\n")
         self._send_to_arduino(f"M{settings['timeout_ms']}\n")
+        self._send_to_arduino(f"X{settings['margin']}\n")
         self.status_updated.emit("All settings sent to Arduino.")
         self._log_to_file("All settings sent to Arduino.")
 
@@ -347,6 +349,9 @@ class FeederController(QObject):
                 # 3. Parse Delays (NEW)
                 self.settings["entry_frames"] = int(settings.get("entry_frames", 15))
                 self.settings["exit_frames"] = int(settings.get("exit_frames", 30))
+
+                #Detection type
+                self.settings["trigger_mode"] = settings.get("trigger_mode", "both")
 
                 # 4. Parse Arduino Timeout (convert from s to ms)
                 timeout_s = float(settings.get("timeout", 10.0))
@@ -390,10 +395,11 @@ class FeederController(QObject):
                 self.settings["hysterisis_1"] = int(settings.get("hysterisis_1", 512))
                 self.settings["hysterisis_2"] = int(settings.get("hysterisis_2", 512))
                 self.settings["hysterisis_3"] = int(settings.get("hysterisis_3", 512))
+                self.settings["margin"] = int(settings.get("margin", 50))
 
                 self.status_updated.emit(
-                    f"Electrode thresholds updated: T1={self.settings['threshold_1']}, T2={self.settings['threshold_2']}, T3={self.settings['threshold_3']}, H1={self.settings['hysterisis_1']}, H2={self.settings['hysterisis_2']}, H3={self.settings['hysterisis_3']}")
-                self._log_to_file(f"Electrode thresholds updated: T1={self.settings['threshold_1']}, T2={self.settings['threshold_2']}, T3={self.settings['threshold_3']}, H1={self.settings['hysterisis_1']}, H2={self.settings['hysterisis_2']}, H3={self.settings['hysterisis_3']}")
+                    f"Electrode thresholds updated: T1={self.settings['threshold_1']}, T2={self.settings['threshold_2']}, T3={self.settings['threshold_3']}, H1={self.settings['hysterisis_1']}, H2={self.settings['hysterisis_2']}, H3={self.settings['hysterisis_3']}, Margin = {self.settings['margin']}")
+                self._log_to_file(f"Electrode thresholds updated: T1={self.settings['threshold_1']}, T2={self.settings['threshold_2']}, T3={self.settings['threshold_3']}, H1={self.settings['hysterisis_1']}, H2={self.settings['hysterisis_2']}, H3={self.settings['hysterisis_3']}, Margin = {self.settings['margin']}")
 
                 # Send to Arduino
                 self._send_to_arduino(f"T{self.settings['threshold_1']}\n")
@@ -402,6 +408,7 @@ class FeederController(QObject):
                 self._send_to_arduino(f"G{self.settings['hysterisis_1']}\n")
                 self._send_to_arduino(f"H{self.settings['hysterisis_2']}\n")
                 self._send_to_arduino(f"J{self.settings['hysterisis_3']}\n")
+                self._send_to_arduino(f"X{self.settings['margin']}\n")
             except Exception as e:
                 self.status_updated.emit(f"Error parsing electrode settings: {e}")
                 self._log_to_file(f"Error parsing electrode settings: {e}")
@@ -711,6 +718,8 @@ class FeederController(QObject):
                 box_w = self.settings.get("box_width", 200)
                 box_h = self.settings.get("box_height", 200)
                 min_area = self.settings.get("min_area", 500)
+                trigger_mode = self.settings.get("trigger_mode", "both")
+
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             blur = cv2.GaussianBlur(gray, (b_size, b_size), 0)
@@ -733,7 +742,7 @@ class FeederController(QObject):
             contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             # --- 3. Bee Detection & Tracking Logic ---
-            is_tag_in_zone = False
+            is_frame_triggered = False
             current_tag_id = "None"
             annotated_frame = frame.copy()
             for cnt in contours:
@@ -747,6 +756,8 @@ class FeederController(QObject):
                 cX = int(M["m10"] / M["m00"])
                 cY = int(M["m01"] / M["m00"])
 
+                motion_in_zone = self._is_tag_in_zone((cX, cY), zone_center, zone_radius)
+                
                 # Second moment of inertia for direction
                 mu11 = M['mu11']
                 mu20 = M['mu20']
@@ -761,6 +772,7 @@ class FeederController(QObject):
                 cv2.drawContours(annotated_frame, [cnt], -1, (255, 255, 0), 1)
 
                 # B. Targeted ArUco Detection in Crop
+                aruco_in_zone = False
                 y1, y2 = np.clip([cY - box_h//2, cY + box_h//2], 0, h)
                 x1, x2 = np.clip([cX - box_w//2, cX + box_w//2], 0, w)
                 
@@ -790,19 +802,26 @@ class FeederController(QObject):
                     if ids is not None:
                         for i, tag_id in enumerate(ids.flatten()):
                             if tag_id in allowed_ids:
-                                global_corners = (c_crop[i] / scale_factor) + np.array([x1, y1])
                                 perimeter = cv2.arcLength(c_crop[i], True)
                                 if min_size < perimeter < max_size:
                                     # Offset corners back to global frame
-                                    global_corners = c_crop[i] + np.array([x1, y1])
-                                    cv2.aruco.drawDetectedMarkers(annotated_frame, [global_corners], np.array([[tag_id]]))
-                                    
+                                    global_corners = (c_crop[i]/scale_factor) + np.array([x1, y1])
+                                    current_tag_id = str(tag_id)
+                                    # Calculate Tag Center for ArUco-mode triggering
+                                    t_cX = int(global_corners[0][:, 0].mean())
+                                    t_cY = int(global_corners[0][:, 1].mean())
                                     # Check Zone logic using the specific tag in this crop
-                                    if self._is_tag_in_zone((cX, cY), zone_center, zone_radius):
-                                        is_tag_in_zone = True
-                                        current_tag_id = str(tag_id)
-
-            if is_tag_in_zone:
+                                    if self._is_tag_in_zone((t_cX, t_cY), zone_center, zone_radius):
+                                        aruco_in_zone = True
+                                    cv2.aruco.drawDetectedMarkers(annotated_frame, [global_corners], np.array([[tag_id]]))    
+                # --- EVALUATE TRIGGER BASED ON MODE ---
+                if trigger_mode == "motion":
+                    if motion_in_zone: is_frame_triggered = True
+                elif trigger_mode == "aruco":
+                    if aruco_in_zone: is_frame_triggered = True
+                elif trigger_mode == "both":
+                    if motion_in_zone and aruco_in_zone: is_frame_triggered = True
+            if is_frame_triggered:
                 self.frames_out_of_zone_counter = 0  # Reset miss counter
                 self.frames_in_zone_counter = min(self.frames_in_zone_counter + 1,
                                                   entry_frames_target)  # Increment hit counter, cap at target
@@ -879,7 +898,7 @@ class FeederController(QObject):
             self.frame_ready.emit(rgb_frame)
 
             # Modest delay to prevent 100% CPU and allow GUI to respond
-            time.sleep(0.01)
+            time.sleep(0.001)
 
         # --- End of Loop ---
         self.status_updated.emit("Processing loop stopped.")

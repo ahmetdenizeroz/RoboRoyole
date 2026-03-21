@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QGroupBox, QPushButton, QLineEdit, QComboBox,
     QLabel, QSlider, QSpinBox, QDoubleSpinBox, QMessageBox,
-    QScrollArea
+    QScrollArea, QRadioButton, QDoubleSpinBox, QSizePolicy
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import (
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
                                                                             #
         self.spin_hysterisis1 = QSpinBox()                                  #
         self.spin_hysterisis1.setRange(0, 1023)                             #
-        self.spin_hysterisis1.setValue(600)                                 #
+        self.spin_hysterisis1.setValue(60)                                 #
                                                                             #
         self.spin_thresh2 = QSpinBox()                                      #
         self.spin_thresh2.setRange(0, 1023)                                 #
@@ -153,7 +153,7 @@ class MainWindow(QMainWindow):
                                                                             #
         self.spin_hysterisis2 = QSpinBox()                                  #
         self.spin_hysterisis2.setRange(0, 1023)                             #
-        self.spin_hysterisis2.setValue(600)                                 #
+        self.spin_hysterisis2.setValue(60)                                 #
                                                                             #
         self.spin_thresh3 = QSpinBox()                                      #
         self.spin_thresh3.setRange(0, 1023)                                 #
@@ -161,7 +161,11 @@ class MainWindow(QMainWindow):
                                                                             #
         self.spin_hysterisis3 = QSpinBox()                                  #
         self.spin_hysterisis3.setRange(0, 1023)                             #
-        self.spin_hysterisis3.setValue(600)                                 #
+        self.spin_hysterisis3.setValue(60)  
+        
+        self.spin_margin = QSpinBox()                                       #
+        self.spin_margin.setRange(0, 5000)                                  #
+        self.spin_margin.setValue(50)                                       #
                                                                             #
         self.btn_apply_electrodes = QPushButton("Apply Electrode Settings") #
                                                                             #
@@ -178,8 +182,11 @@ class MainWindow(QMainWindow):
         electrode_layout.addWidget(self.spin_hysterisis2, 1, 4)             #
         electrode_layout.addWidget(QLabel("Hysterisis 3 (Front):"), 2, 3)   #
         electrode_layout.addWidget(self.spin_hysterisis3, 2, 4)             #
+
+        electrode_layout.addWidget(QLabel("Soft Stop Margin:"), 3, 0, 1, 2) #
+        electrode_layout.addWidget(self.spin_margin, 3, 1, 1, 4)
                                                                             #
-        electrode_layout.addWidget(self.btn_apply_electrodes, 3, 0, 1, 5)   #
+        electrode_layout.addWidget(self.btn_apply_electrodes, 4, 0, 1, 5)   #
                                                                             #
         electrode_group.setLayout(electrode_layout)                         #
         left_column.addWidget(electrode_group)                              #
@@ -199,7 +206,19 @@ class MainWindow(QMainWindow):
                                                                             #
         # NEW Frame Inputs                                                  #
         self.entry_frames_input = QLineEdit("15")                           #   
-        self.exit_frames_input = QLineEdit("30")                            #       
+        self.exit_frames_input = QLineEdit("30")   
+        
+        #Detection type                                                     #
+        self.radio_motion = QRadioButton("Motion")
+        self.radio_aruco = QRadioButton("ArUco")
+        self.radio_both = QRadioButton("Both")
+        self.radio_both.setChecked(True)     
+
+        trigger_mode_layout = QHBoxLayout()
+        trigger_mode_layout.addWidget(QLabel("Trigger Type:"))
+        trigger_mode_layout.addWidget(self.radio_motion)
+        trigger_mode_layout.addWidget(self.radio_aruco)
+        trigger_mode_layout.addWidget(self.radio_both)  
                                                                             #
         self.btn_apply_detection = QPushButton("Apply Detection Settings")  #
                                                                             #
@@ -215,10 +234,11 @@ class MainWindow(QMainWindow):
         detection_layout.addWidget(self.entry_frames_input, 4, 1)           #
         detection_layout.addWidget(QLabel("Exit Confirmation (frames):"), 5, 0)
         detection_layout.addWidget(self.exit_frames_input, 5, 1)            #
-        detection_layout.addWidget(self.btn_apply_detection, 6, 0, 1, 2)    #
+        detection_layout.addLayout(trigger_mode_layout, 6, 0, 1, 2)
+        detection_layout.addWidget(self.btn_apply_detection, 7, 0, 1, 2)    #
                                                                             #
         detection_group.setLayout(detection_layout)                         #   
-        left_column.addWidget(detection_group)                              #   
+        right_column.addWidget(detection_group)                              #   
 #############################################################################
 
 #############################################################################
@@ -277,7 +297,7 @@ class MainWindow(QMainWindow):
         recording_layout.addWidget(self.btn_record, 1, 0, 1, 2)             #
                                                                             #
         recording_group.setLayout(recording_layout)                         #
-        right_column.addWidget(recording_group)                              #
+        left_column.addWidget(recording_group)                              #
 #############################################################################
 
 #############################################################################
@@ -310,7 +330,7 @@ class MainWindow(QMainWindow):
             ("Close Power", "slider_close_p", 2, 10),
             ("Box Width", "slider_width", 200, 300),
             ("Box Height", "slider_height", 200, 300),
-            ("Min Bee Area", "slider_area", 50, 1000)
+            ("Min Bee Area", "slider_area", 2000, 5000)
         ]
         self.sliders = {}
         for i, (name, attr, default, maximum) in enumerate(slider_configs):
@@ -698,13 +718,21 @@ class MainWindow(QMainWindow):
 
     def apply_detection_settings(self):
         """Send detection settings to the core."""
+        if self.radio_motion.isChecked():
+            mode = "motion"
+        elif self.radio_aruco.isChecked():
+            mode = "aruco"
+        else:
+            mode = "both"
+
         settings = {
             "allowed_ids": self.ids_input.text(),
             "min_size": self.min_size_input.text(),
             "max_size": self.max_size_input.text(),
             "timeout": self.timeout_input.text(),
-            "entry_frames": self.entry_frames_input.text(),  # NEW
-            "exit_frames": self.exit_frames_input.text()  # NEW
+            "entry_frames": self.entry_frames_input.text(),
+            "exit_frames": self.exit_frames_input.text(),  
+            "trigger_mode": mode
         }
         self.controller.update_detection_settings(settings)
 
@@ -725,7 +753,8 @@ class MainWindow(QMainWindow):
             "threshold_3": self.spin_thresh3.value(),
             "hysterisis_1": self.spin_hysterisis1.value(),
             "hysterisis_2": self.spin_hysterisis2.value(),
-            "hysterisis_3": self.spin_hysterisis3.value()
+            "hysterisis_3": self.spin_hysterisis3.value(),
+            "margin": self.spin_margin.value()
         }
         self.controller.update_electrode_settings(settings)
 
