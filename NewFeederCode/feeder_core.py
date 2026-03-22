@@ -138,6 +138,7 @@ class FeederController(QObject):
             "hysterisis_1": 60,
             "hysterisis_2": 60,
             "hysterisis_3": 60,
+            "margin": 50,
             # Detection
             "allowed_ids": set([1, 2, 5, 6, 7, 8, 9, 10]),
             "min_size": 50,
