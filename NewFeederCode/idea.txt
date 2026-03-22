@@ -1,0 +1,1 @@
+if we want to detect queen when mixed with workers and we are unable to detect aruco, we can train AI with pictures of queen with aruco glued. Then the AI can recognize bee with the aruco glued but cannot detect id.

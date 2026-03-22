@@ -330,7 +330,11 @@ class MainWindow(QMainWindow):
             ("Close Power", "slider_close_p", 2, 10),
             ("Box Width", "slider_width", 200, 300),
             ("Box Height", "slider_height", 200, 300),
-            ("Min Bee Area", "slider_area", 2000, 5000)
+            ("Min Bee Area", "slider_area", 2000, 5000),
+            ("ROI X", "slider_roi_x", 0, 1920),
+            ("ROI Y", "slider_roi_y", 0, 1080),
+            ("ROI W", "slider_roi_w", 100, 1920),
+            ("ROI h", "slider_roi_h", 100, 1080)
         ]
         self.sliders = {}
         for i, (name, attr, default, maximum) in enumerate(slider_configs):
@@ -357,16 +361,50 @@ class MainWindow(QMainWindow):
             slider.valueChanged.connect(lambda val, l=val_label: l.setText(str(val)))
             #slider.valueChanged.connect(self.apply_image_processing_settings)
 
+
+
         self.btn_apply_image = QPushButton("Apply Image Settings")
-        image_process_layout.addWidget(self.btn_apply_image, 9, 0, 1, 3) # Span across all 3 columns
+        image_process_layout.addWidget(self.btn_apply_image, 13, 0, 1, 3) # Span across all 3 columns
         self.btn_recapture_bg = QPushButton("Recapture Background")
-        image_process_layout.addWidget(self.btn_recapture_bg, 10, 0, 1, 3) # Span across all 3 columns
+        image_process_layout.addWidget(self.btn_recapture_bg, 14, 0, 1, 3) # Span across all 3 columns
 
         image_process_group.setLayout(image_process_layout)
         left_column.addWidget(image_process_group)       
 #############################################################################
+#                           Secondary Zone                                  #
+#############################################################################
+        sec_zone_group = QGroupBox("Secondary Zone (Feeding Check)")
+        sec_zone_layout = QGridLayout()
+
+        self.spin_sec_x = QSpinBox()
+        self.spin_sec_y = QSpinBox()
+        self.spin_sec_r = QSpinBox()
+        self.spin_sec_int = QSpinBox()
+
+        for spin in [self.spin_sec_x, self.spin_sec_y, self.spin_sec_r]:
+            spin.setRange(0, 2000)
+        self.spin_sec_int.setRange(0, 255)
+        self.spin_sec_int.setValue(20)
+
+        sec_zone_layout.addWidget(QLabel("Center X:"), 0, 0)
+        sec_zone_layout.addWidget(self.spin_sec_x, 0, 1)
+        sec_zone_layout.addWidget(QLabel("Center Y:"), 1, 0)
+        sec_zone_layout.addWidget(self.spin_sec_y, 1, 1)
+        sec_zone_layout.addWidget(QLabel("Radius:"), 2, 0)
+        sec_zone_layout.addWidget(self.spin_sec_r, 2, 1)
+        sec_zone_layout.addWidget(QLabel("Diff Intensity:"), 3, 0)
+        sec_zone_layout.addWidget(self.spin_sec_int, 3, 1)
+
+        self.btn_apply_sec_zone = QPushButton("Apply Secondary Zone")
+        sec_zone_layout.addWidget(self.btn_apply_sec_zone, 4, 0, 1, 2)
         
-        
+        # Add this new group to the left column
+        left_column.addWidget(sec_zone_group)
+        sec_zone_group.setLayout(sec_zone_layout)
+
+        # Connect the button
+        self.btn_apply_sec_zone.clicked.connect(self.apply_secondary_zone_settings)
+###########################################################################################        
         
         # Push everything to the top in both columns
         left_column.addStretch()
@@ -744,6 +782,15 @@ class MainWindow(QMainWindow):
             
         }
         self.controller.update_motor_settings(settings)
+    
+    def apply_secondary_zone_settings(self):
+        settings = {
+            "x": self.spin_sec_x.value(),
+            "y": self.spin_sec_y.value(),
+            "r": self.spin_sec_r.value(),
+            "intensity": self.spin_sec_int.value()
+        }
+        self.controller.update_secondary_zone(settings)
 
     def apply_electrode_settings(self):
         """Send electrode settings to the core."""
@@ -769,10 +816,15 @@ class MainWindow(QMainWindow):
             "close_power": self.slider_close_p.value(),
             "box_width": self.slider_width.value(),
             "box_height": self.slider_height.value(),
-            "min_area": self.slider_area.value()
+            "min_area": self.slider_area.value(),
+            "roi_x": self.slider_roi_x.value(),
+            "roi_y": self.slider_roi_y.value(),
+            "roi_w": self.slider_roi_w.value(),
+            "roi_h": self.slider_roi_h.value()
         }
         # This sends the dictionary to your controller
         self.controller.update_image_processing(settings)
+
     def recapture_bg(self):
         """ Send command to recapture bg for bg substruction"""
         self.controller.should_recapture_bg = True

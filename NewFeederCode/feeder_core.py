@@ -163,7 +163,14 @@ class FeederController(QObject):
             "close_power": 2,
             "box_width": 200,
             "box_height": 200,
-            "min_area" : 2000
+            "min_area" : 2000,
+            "roi_x": 0,
+            "roi_y": 0,
+            "roi_w": 640,
+            "roi_h": 480,
+            "sec_zone_center": (0, 0),
+            "sec_zone_radius": 0,
+            "diff_intensity": 20,
         }
 
         # --- New Frame-based Zone Logic ---
@@ -237,6 +244,16 @@ class FeederController(QObject):
             self.status_updated.emit("Camera disconnected.")
             self._log_to_file("Camera disconnected.")
 
+    def update_secondary_zone(self, settings: dict):
+        """(GUI Thread) Updates the secondary detection zone."""
+        with self.settings_lock:
+            try:
+                self.settings["sec_zone_center"] = (int(settings.get("x", 0)), int(settings.get("y", 0)))
+                self.settings["sec_zone_radius"] = int(settings.get("r", 0))
+                self.settings["diff_intensity"] = int(settings.get("intensity", 20))
+                self.status_updated.emit("Secondary zone settings updated.")
+            except Exception as e:
+                self.status_updated.emit(f"Error secondary zone: {e}")
 
     def connect_arduino(self, port):
         """(Worker Thread) Connects to the Arduino."""
@@ -425,11 +442,16 @@ class FeederController(QObject):
                 self.settings["box_width"] = int(settings.get("box_width", 200))
                 self.settings["box_height"] = int(settings.get("box_height", 200))
                 self.settings["min_area"] = int(settings.get("min_area", 200))
+                self.settings["roi_x"] = int(settings.get("roi_x", 0))
+                self.settings["roi_y"] = int(settings.get("roi_y", 0))
+                self.settings["roi_w"] = int(settings.get("roi_w", 640))
+                self.settings["roi_h"] = int(settings.get("roi_h", 480))
                 self.status_updated.emit("Image processing settings updated.")
                 self._log_to_file("Image processing settings updated.")  
             except Exception as e:
                 self.status_updated.emit(f"Error parsing image processing settings: {e}")
                 self._log_to_file(f"Error parsing image processing settings: {e}")
+
     def update_recording_settings(self, resolution_text: str):
         """(GUI Thread) Updates the output resolution setting."""
         with self.settings_lock:
@@ -654,11 +676,12 @@ class FeederController(QObject):
 #                                                               MAIN PROCESSING LOOP                                                    #
 #########################################################################################################################################
     def _process_loop(self):
+        prev_time = time.perf_counter()
+        last_sec_log_time = 0
         """
         (Processing Thread) This is the main loop that reads frames,
         performs detection, and sends signals.
         """
-        prev_time = time.perf_counter()
         first_blur = None
 
         while self.is_processing:
@@ -696,7 +719,7 @@ class FeederController(QObject):
             y_pos = h - 15
 
             original_frame = frame.copy()   
-
+            annotated_frame = frame.copy()
             # Get current settings in a thread-safe way
             with self.settings_lock:
                 # ArUco/Zone settings (Untouched)
@@ -719,10 +742,16 @@ class FeederController(QObject):
                 box_h = self.settings.get("box_height", 200)
                 min_area = self.settings.get("min_area", 500)
                 trigger_mode = self.settings.get("trigger_mode", "both")
+                rx, ry, rw, rh = self.settings["roi_x"], self.settings["roi_y"], self.settings["roi_w"], self.settings["roi_h"]
+                sec_center = self.settings["sec_zone_center"]
+                sec_radius = self.settings["sec_zone_radius"]
+                diff_limit = self.settings["diff_intensity"]
 
-
+            cv2.rectangle(annotated_frame, (rx, ry), (rx + rw, ry + rh), (255, 255, 255), 1)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             blur = cv2.GaussianBlur(gray, (b_size, b_size), 0)
+            mask = np.zeros(gray.shape, dtype=np.uint8)
+            mask[ry:ry+rh, rx:rx+rw] = 255
 
             if first_blur is None or self.should_recapture_bg:
                 first_blur = blur.copy()
@@ -732,6 +761,27 @@ class FeederController(QObject):
                 continue
 
             diff = cv2.absdiff(first_blur, blur)
+            diff = cv2.bitwise_and(diff, diff, mask=mask) # Only look at ROI
+
+            if sec_radius > 0:
+                # Create a mask for the secondary circle
+                sec_mask = np.zeros(diff.shape, dtype=np.uint8)
+                cv2.circle(sec_mask, sec_center, sec_radius, 255, -1)       
+                # Calculate mean difference intensity within that circle
+                mean_val = cv2.mean(diff, mask=sec_mask)[0]
+                # Draw the secondary zone (Blue for idle, Cyan for "Possible Feeding")
+                current_time = time.perf_counter()
+                if mean_val > diff_limit and (current_time - last_sec_log_time) >= 0.5:
+                    self.status_updated.emit(f"Possible feeding (Intensity: {mean_val:.1f})")
+                    self._log_to_file(f"Possible feeding detected at secondary zone: {mean_val:.1f}")
+                    last_sec_log_time = current_time
+
+                sec_color = (255, 255, 0) # Cyan
+                if mean_val > diff_limit:
+                    sec_color = (255, 0, 0) # Blue (Alert/Feeding)
+                cv2.circle(annotated_frame, sec_center, sec_radius, sec_color, 1)
+
+
             _, thresh = cv2.threshold(diff, t_val, 255, cv2.THRESH_BINARY)
 
             kernel_open = np.ones((op_k, op_k), np.uint8)
@@ -744,7 +794,6 @@ class FeederController(QObject):
             # --- 3. Bee Detection & Tracking Logic ---
             is_frame_triggered = False
             current_tag_id = "None"
-            annotated_frame = frame.copy()
             for cnt in contours:
                 if cv2.contourArea(cnt) < min_area:
                     continue
@@ -777,6 +826,7 @@ class FeederController(QObject):
                 x1, x2 = np.clip([cX - box_w//2, cX + box_w//2], 0, w)
                 
                 if y2 > y1 and x2 > x1:
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 255), 1)
                     bee_crop_gray = gray[y1:y2, x1:x2]
                     
                     bee_crop_norm = cv2.normalize(bee_crop_gray, None, 0, 255, cv2.NORM_MINMAX)
