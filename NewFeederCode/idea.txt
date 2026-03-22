@@ -1,1 +1,10 @@
 if we want to detect queen when mixed with workers and we are unable to detect aruco, we can train AI with pictures of queen with aruco glued. Then the AI can recognize bee with the aruco glued but cannot detect id.
+
+The Copy-Paste PromptTask: 
+Add "Intern Page" UI with Minimal Code Disturbance
+I need to add a dual-mode interface to my bee feeder setup. Please modify the following three files (feeder.ino, feeder_core.py, and feeder_gui.py) following these strict rules:Do not modify or reformat any unrelated lines of code. 
+Keep all existing variable names, logic, and spacing untouched.
+* Add a QComboBox at the very top of the window to switch between "Expert Mode" and "Intern Page".Use a QStackedWidget to toggle views. Index 0 should be my original layout exactly as it is now. Index 1 should be a new "Intern Page".
+* Intern Page: Create a simple layout with three large buttons: "EXTEND SPOON" (linked to prime_pump), "RETRACT SPOON" (linked to retract_pump), and "RESET CALIBRATION" (linked to reset_calibration).
+5. Style: Ensure the custom Bee Theme remains applied to all new elements.
+6. Do not remove any comment block.

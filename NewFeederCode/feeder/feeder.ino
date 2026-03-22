@@ -174,6 +174,9 @@ void runStateMachine() {
       if (bOn && !mOn && !fOn) {
         // Record new calibration distance
         numberOfSteps = abs(retractStartPos - stepper.currentPosition());
+        if (wasSoftStop && numberOfSteps >= margin) {
+          numberOfSteps -= margin;
+        }
         Serial.print("number_of_steps set: "); Serial.println(numberOfSteps);
         
         Serial.println("STATUS: Retract Complete. Entering WAITING.");
@@ -315,11 +318,15 @@ void processCommand(String cmd) {
   switch (type) {
     case 'F': 
     case 'P': 
-      if (state != HOLDING) {
-        Serial.println("CMD: Feed Sequence Start"); // RESTORED
+    
+      if (state == IDLE || state == WAITING) {
+        Serial.println("CMD: Feed Sequence Start");
         ejectStartPos = stepper.currentPosition();
         state = EJECTING;
-        lastAutoFeedTime = millis(); 
+        lastAutoFeedTime = millis();
+      } else {
+          // This covers EJECTING, RETRACTING, and HOLDING
+          Serial.println("CMD REJECTED: System busy.");
       }
       break;
     case 'W': 
@@ -397,6 +404,10 @@ void processCommand(String cmd) {
       Serial.println("Soft Stop Margin set to");
       Serial.println(val); // RESTORED
       margin = val;
+      break;
+    case 'K': 
+      numberOfSteps = 0;
+      Serial.println("CMD: Reset Step Calibration");
       break;
   }
 }

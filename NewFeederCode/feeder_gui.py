@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QGroupBox, QPushButton, QLineEdit, QComboBox,
     QLabel, QSlider, QSpinBox, QDoubleSpinBox, QMessageBox,
-    QScrollArea, QRadioButton, QDoubleSpinBox, QSizePolicy
+    QScrollArea, QRadioButton, QDoubleSpinBox, QSizePolicy,
 )
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import (
@@ -168,6 +168,7 @@ class MainWindow(QMainWindow):
         self.spin_margin.setValue(50)                                       #
                                                                             #
         self.btn_apply_electrodes = QPushButton("Apply Electrode Settings") #
+        self.btn_reset_cal = QPushButton("Reset Step Calibration")
                                                                             #
         electrode_layout.addWidget(QLabel("Threshold 1 (Back):"), 0, 0)     #
         electrode_layout.addWidget(self.spin_thresh1, 0, 1)                 #
@@ -187,6 +188,7 @@ class MainWindow(QMainWindow):
         electrode_layout.addWidget(self.spin_margin, 3, 1, 1, 4)
                                                                             #
         electrode_layout.addWidget(self.btn_apply_electrodes, 4, 0, 1, 5)   #
+        electrode_layout.addWidget(self.btn_reset_cal, 5, 0, 1, 5)
                                                                             #
         electrode_group.setLayout(electrode_layout)                         #
         left_column.addWidget(electrode_group)                              #
@@ -214,11 +216,20 @@ class MainWindow(QMainWindow):
         self.radio_both = QRadioButton("Both")
         self.radio_both.setChecked(True)     
 
+        self.radio_bg_with = QRadioButton("With BG")
+        self.radio_bg_without = QRadioButton("Without BG")
+        self.radio_bg_with.setChecked(True)
+
         trigger_mode_layout = QHBoxLayout()
         trigger_mode_layout.addWidget(QLabel("Trigger Type:"))
         trigger_mode_layout.addWidget(self.radio_motion)
         trigger_mode_layout.addWidget(self.radio_aruco)
         trigger_mode_layout.addWidget(self.radio_both)  
+
+        bg_mode_layout = QHBoxLayout()
+        bg_mode_layout.addWidget(QLabel("BG Mode:"))
+        bg_mode_layout.addWidget(self.radio_bg_with)
+        bg_mode_layout.addWidget(self.radio_bg_without)
                                                                             #
         self.btn_apply_detection = QPushButton("Apply Detection Settings")  #
                                                                             #
@@ -235,7 +246,7 @@ class MainWindow(QMainWindow):
         detection_layout.addWidget(QLabel("Exit Confirmation (frames):"), 5, 0)
         detection_layout.addWidget(self.exit_frames_input, 5, 1)            #
         detection_layout.addLayout(trigger_mode_layout, 6, 0, 1, 2)
-        detection_layout.addWidget(self.btn_apply_detection, 7, 0, 1, 2)    #
+        detection_layout.addWidget(self.btn_apply_detection, 8, 0, 1, 2)    #
                                                                             #
         detection_group.setLayout(detection_layout)                         #   
         right_column.addWidget(detection_group)                              #   
@@ -357,16 +368,17 @@ class MainWindow(QMainWindow):
             image_process_layout.addWidget(slider, i, 1)
             image_process_layout.addWidget(val_label, i, 2)
 
+
             # Connect signal to update the readout and the logic
             slider.valueChanged.connect(lambda val, l=val_label: l.setText(str(val)))
             #slider.valueChanged.connect(self.apply_image_processing_settings)
 
 
-
+        image_process_layout.addLayout(bg_mode_layout, 13, 0, 1, 2)
         self.btn_apply_image = QPushButton("Apply Image Settings")
-        image_process_layout.addWidget(self.btn_apply_image, 13, 0, 1, 3) # Span across all 3 columns
+        image_process_layout.addWidget(self.btn_apply_image, 14, 0, 1, 3) # Span across all 3 columns
         self.btn_recapture_bg = QPushButton("Recapture Background")
-        image_process_layout.addWidget(self.btn_recapture_bg, 14, 0, 1, 3) # Span across all 3 columns
+        image_process_layout.addWidget(self.btn_recapture_bg, 15, 0, 1, 3) # Span across all 3 columns
 
         image_process_group.setLayout(image_process_layout)
         left_column.addWidget(image_process_group)       
@@ -427,6 +439,7 @@ class MainWindow(QMainWindow):
         self.btn_apply_detection.clicked.connect(self.apply_detection_settings)
         self.btn_apply_motor.clicked.connect(self.apply_motor_settings)
         self.btn_apply_electrodes.clicked.connect(self.apply_electrode_settings)
+        self.btn_reset_cal.clicked.connect(self.controller.reset_calibration)
 
         # NEW motor button logic
         self.btn_start_waiting.toggled.connect(self.toggle_waiting_mode)
@@ -751,7 +764,6 @@ class MainWindow(QMainWindow):
             self.btn_connect_arduino.setStyleSheet("")  # Reset style
 
         self.worker = None  # Clear the worker
-
     # --- Settings Slots ---
 
     def apply_detection_settings(self):
@@ -762,7 +774,6 @@ class MainWindow(QMainWindow):
             mode = "aruco"
         else:
             mode = "both"
-
         settings = {
             "allowed_ids": self.ids_input.text(),
             "min_size": self.min_size_input.text(),
@@ -807,6 +818,7 @@ class MainWindow(QMainWindow):
 
     def apply_image_processing_settings(self):
         """Send image processing (OpenCV) variables to the core."""
+        bg_mode = "Without BG" if self.radio_bg_without.isChecked() else "With BG"
         settings = {
             "blur_size": self.slider_blur.value(),
             "threshold": self.slider_thresh.value(),
@@ -820,7 +832,8 @@ class MainWindow(QMainWindow):
             "roi_x": self.slider_roi_x.value(),
             "roi_y": self.slider_roi_y.value(),
             "roi_w": self.slider_roi_w.value(),
-            "roi_h": self.slider_roi_h.value()
+            "roi_h": self.slider_roi_h.value(),
+            "bg_mode": bg_mode
         }
         # This sends the dictionary to your controller
         self.controller.update_image_processing(settings)

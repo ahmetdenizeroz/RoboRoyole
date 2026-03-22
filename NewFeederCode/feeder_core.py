@@ -147,6 +147,7 @@ class FeederController(QObject):
             "entry_frames": 15,  # Python: consecutive frames to confirm entry
             "exit_frames": 30,  # Python: consecutive frames to confirm exit
             "trigger_mode": "both",
+            "bg_mode": "With BG",
             # Motor
             "motor_speed": 1000,
             "motor_accel": 500,
@@ -447,6 +448,7 @@ class FeederController(QObject):
                 self.settings["roi_y"] = int(settings.get("roi_y", 0))
                 self.settings["roi_w"] = int(settings.get("roi_w", 640))
                 self.settings["roi_h"] = int(settings.get("roi_h", 480))
+                self.settings["bg_mode"] = settings.get("bg_mode", "With BG")
                 self.status_updated.emit("Image processing settings updated.")
                 self._log_to_file("Image processing settings updated.")  
             except Exception as e:
@@ -560,6 +562,13 @@ class FeederController(QObject):
 
         self.log_pump_event("MANUAL_STOP", "MANUAL")
         self._send_to_arduino('S\n')  # Stop
+
+    @Slot()
+    def reset_calibration(self):
+        """(GUI Thread) Resets the soft stop step calibration on Arduino."""
+        self.status_updated.emit("Resetting step calibration...")
+        self._log_to_file("Resetting step calibration...")
+        self._send_to_arduino('K\n')
 
 ##################################################################################################
     @Slot()
@@ -743,135 +752,173 @@ class FeederController(QObject):
                 box_h = self.settings.get("box_height", 200)
                 min_area = self.settings.get("min_area", 500)
                 trigger_mode = self.settings.get("trigger_mode", "both")
+                bg_mode = self.settings.get("bg_mode", "With BG")
                 rx, ry, rw, rh = self.settings["roi_x"], self.settings["roi_y"], self.settings["roi_w"], self.settings["roi_h"]
                 sec_center = self.settings["sec_zone_center"]
                 sec_radius = self.settings["sec_zone_radius"]
                 diff_limit = self.settings["diff_intensity"]
 
-            cv2.rectangle(annotated_frame, (rx, ry), (rx + rw, ry + rh), (255, 255, 255), 1)
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            blur = cv2.GaussianBlur(gray, (b_size, b_size), 0)
-            mask = np.zeros(gray.shape, dtype=np.uint8)
-            mask[ry:ry+rh, rx:rx+rw] = 255
-
-            if first_blur is None or self.should_recapture_bg:
-                first_blur = blur.copy()
-                self.should_recapture_bg = False  # Reset the flag
-                self.status_updated.emit("Background updated.")
-                self._log_to_file("Background reference frame recaptured.")
-                continue
-
-            diff = cv2.absdiff(first_blur, blur)
-            diff = cv2.bitwise_and(diff, diff, mask=mask) # Only look at ROI
-
-            if sec_radius > 0:
-                # Create a mask for the secondary circle
-                sec_mask = np.zeros(diff.shape, dtype=np.uint8)
-                cv2.circle(sec_mask, sec_center, sec_radius, 255, -1)       
-                # Calculate mean difference intensity within that circle
-                mean_val = cv2.mean(diff, mask=sec_mask)[0]
-                # Draw the secondary zone (Blue for idle, Cyan for "Possible Feeding")
-                current_time = time.perf_counter()
-                if mean_val > diff_limit and (current_time - last_sec_log_time) >= 0.5:
-                    self.status_updated.emit(f"Possible feeding (Intensity: {mean_val:.1f})")
-                    self._log_to_file(f"Possible feeding detected at secondary zone: {mean_val:.1f}")
-                    last_sec_log_time = current_time
-
-                sec_color = (255, 255, 0) # Cyan
-                if mean_val > diff_limit:
-                    sec_color = (255, 0, 0) # Blue (Alert/Feeding)
-                cv2.circle(annotated_frame, sec_center, sec_radius, sec_color, 1)
-
-
-            _, thresh = cv2.threshold(diff, t_val, 255, cv2.THRESH_BINARY)
-
-            kernel_open = np.ones((op_k, op_k), np.uint8)
-            opened = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_open, iterations=op_p)
-            kernel_close = np.ones((cl_k, cl_k), np.uint8)
-            closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel_close, iterations=cl_p)
-
-            contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            # --- 3. Bee Detection & Tracking Logic ---
             is_frame_triggered = False
             current_tag_id = "None"
-            for cnt in contours:
-                if cv2.contourArea(cnt) < min_area:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            
+            if bg_mode == "With BG":  
+                cv2.rectangle(annotated_frame, (rx, ry), (rx + rw, ry + rh), (255, 255, 255), 1)    
+                blur = cv2.GaussianBlur(gray, (b_size, b_size), 0)
+                mask = np.zeros(gray.shape, dtype=np.uint8)
+                mask[ry:ry+rh, rx:rx+rw] = 255
+
+                if first_blur is None or self.should_recapture_bg:
+                    first_blur = blur.copy()
+                    self.should_recapture_bg = False  # Reset the flag
+                    self.status_updated.emit("Background updated.")
+                    self._log_to_file("Background reference frame recaptured.")
                     continue
 
-                # A. Calculate Moments for Centroid and Orientation
-                M = cv2.moments(cnt)
-                if M["m00"] == 0: continue
-                
-                cX = int(M["m10"] / M["m00"])
-                cY = int(M["m01"] / M["m00"])
+                diff = cv2.absdiff(first_blur, blur)
+                diff = cv2.bitwise_and(diff, diff, mask=mask) # Only look at ROI
 
-                motion_in_zone = self._is_tag_in_zone((cX, cY), zone_center, zone_radius)
-                
-                # Second moment of inertia for direction
-                mu11 = M['mu11']
-                mu20 = M['mu20']
-                mu02 = M['mu02']
-                angle = 0.5 * np.arctan2(2 * mu11, (mu20 - mu02))
-                
-                # Draw Centroid and Direction Line
-                cv2.circle(annotated_frame, (cX, cY), 5, (255, 0, 0), -1)
-                line_len = 40
-                p2 = (int(cX + line_len * np.cos(angle)), int(cY + line_len * np.sin(angle)))
-                cv2.line(annotated_frame, (cX, cY), p2, (255, 255, 0), 2)
-                cv2.drawContours(annotated_frame, [cnt], -1, (255, 255, 0), 1)
+                if sec_radius > 0:
+                    # Create a mask for the secondary circle
+                    sec_mask = np.zeros(diff.shape, dtype=np.uint8)
+                    cv2.circle(sec_mask, sec_center, sec_radius, 255, -1)       
+                    # Calculate mean difference intensity within that circle
+                    mean_val = cv2.mean(diff, mask=sec_mask)[0]
+                    # Draw the secondary zone (Blue for idle, Cyan for "Possible Feeding")
+                    current_time = time.perf_counter()
+                    if mean_val > diff_limit and (current_time - last_sec_log_time) >= 0.5:
+                        self.status_updated.emit(f"Possible feeding (Intensity: {mean_val:.1f})")
+                        self._log_to_file(f"Possible feeding detected at secondary zone: {mean_val:.1f}")
+                        last_sec_log_time = current_time
 
-                # B. Targeted ArUco Detection in Crop
-                aruco_in_zone = False
-                y1, y2 = np.clip([cY - box_h//2, cY + box_h//2], 0, h)
-                x1, x2 = np.clip([cX - box_w//2, cX + box_w//2], 0, w)
+                    sec_color = (255, 255, 0) # Cyan
+                    if mean_val > diff_limit:
+                        sec_color = (255, 0, 0) # Blue (Alert/Feeding)
+                    cv2.circle(annotated_frame, sec_center, sec_radius, sec_color, 1)
+
+
+                _, thresh = cv2.threshold(diff, t_val, 255, cv2.THRESH_BINARY)
+
+                kernel_open = np.ones((op_k, op_k), np.uint8)
+                opened = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_open, iterations=op_p)
+                kernel_close = np.ones((cl_k, cl_k), np.uint8)
+                closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel_close, iterations=cl_p)
+
+                contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 
-                if y2 > y1 and x2 > x1:
+                # --- 3. Bee Detection & Tracking Logic ---
+                for cnt in contours:
+                    if cv2.contourArea(cnt) < min_area:
+                        continue
+
+                    # A. Calculate Moments for Centroid and Orientation
+                    M = cv2.moments(cnt)
+                    if M["m00"] == 0: continue
+                    
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
+
+                    motion_in_zone = self._is_tag_in_zone((cX, cY), zone_center, zone_radius)
+                    
+                    # Second moment of inertia for direction
+                    mu11 = M['mu11']
+                    mu20 = M['mu20']
+                    mu02 = M['mu02']
+                    angle = 0.5 * np.arctan2(2 * mu11, (mu20 - mu02))
+                    
+                    # Draw Centroid and Direction Line
+                    cv2.circle(annotated_frame, (cX, cY), 5, (255, 0, 0), -1)
+                    line_len = 40
+                    p2 = (int(cX + line_len * np.cos(angle)), int(cY + line_len * np.sin(angle)))
+                    cv2.line(annotated_frame, (cX, cY), p2, (255, 255, 0), 2)
+                    cv2.drawContours(annotated_frame, [cnt], -1, (255, 255, 0), 1)
+
+                    # B. Targeted ArUco Detection in Crop
+                    aruco_in_zone = False
+                    y1, y2 = np.clip([cY - box_h//2, cY + box_h//2], 0, h)
+                    x1, x2 = np.clip([cX - box_w//2, cX + box_w//2], 0, w)
+                    
+                    if y2 > y1 and x2 > x1:
+                        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 255), 1)
+                        bee_crop_gray = gray[y1:y2, x1:x2]
+                        
+                        bee_crop_norm = cv2.normalize(bee_crop_gray, None, 0, 255, cv2.NORM_MINMAX)
+                        scale_factor = 1.5
+                        zoom_for_aruco = cv2.resize(bee_crop_norm, None, fx=scale_factor, fy=scale_factor, 
+                                                    interpolation=cv2.INTER_LANCZOS4)                 
+                        # 3. ArUco Parameters with proportional Rates
+                        try:
+                            params = cv2.aruco.DetectorParameters()
+                        except AttributeError:
+                            params = cv2.aruco.DetectorParameters_create()
+
+                        # Using the zoom_for_aruco dimensions for the rate calculation
+                        z_h, z_w = zoom_for_aruco.shape[:2]
+                        max_dim = max(z_h, z_w)
+                        
+                        params.minMarkerPerimeterRate = min_size / max_dim if max_dim > 0 else 0.03
+                        params.maxMarkerPerimeterRate = max_size / max_dim if max_dim > 0 else 4.0
+
+                        c_crop, ids, _ = cv2.aruco.detectMarkers(zoom_for_aruco, self.aruco_dict, parameters=params)
+
+
+                        if ids is not None:
+                            for i, tag_id in enumerate(ids.flatten()):
+                                if tag_id in allowed_ids:
+                                    perimeter = cv2.arcLength(c_crop[i], True)
+                                    if min_size < perimeter < max_size:
+                                        # Offset corners back to global frame
+                                        global_corners = (c_crop[i]/scale_factor) + np.array([x1, y1])
+                                        current_tag_id = str(tag_id)
+                                        # Calculate Tag Center for ArUco-mode triggering
+                                        t_cX = int(global_corners[0][:, 0].mean())
+                                        t_cY = int(global_corners[0][:, 1].mean())
+                                        # Check Zone logic using the specific tag in this crop
+                                        if self._is_tag_in_zone((t_cX, t_cY), zone_center, zone_radius):
+                                            aruco_in_zone = True
+                                        cv2.aruco.drawDetectedMarkers(annotated_frame, [global_corners], np.array([[tag_id]]))    
+                    # --- EVALUATE TRIGGER BASED ON MODE ---
+                    if trigger_mode == "motion":
+                        if motion_in_zone: is_frame_triggered = True
+                    elif trigger_mode == "aruco":
+                        if aruco_in_zone: is_frame_triggered = True
+                    elif trigger_mode == "both":
+                        if motion_in_zone and aruco_in_zone: is_frame_triggered = True
+            else:
+                # --- NEW: NO BACKGROUND SUBTRACTION MODE ---
+                # Draw secondary zone as just a visual circle
+                if sec_radius > 0:
+                    cv2.circle(annotated_frame, sec_center, sec_radius, (255, 255, 0), 1)
+
+                # Detection is focused ONLY on the feeding zone square crop
+                if zone_radius > 0:
+                    zX, zY = zone_center
+                    # Square encapsulating the circle
+                    x1, y1 = max(0, zX - zone_radius), max(0, zY - zone_radius)
+                    x2, y2 = min(w, zX + zone_radius), min(h, zY + zone_radius)
+                    
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 255), 1)
-                    bee_crop_gray = gray[y1:y2, x1:x2]
+                    zone_crop = gray[y1:y2, x1:x2]
                     
-                    bee_crop_norm = cv2.normalize(bee_crop_gray, None, 0, 255, cv2.NORM_MINMAX)
-                    scale_factor = 1.5
-                    zoom_for_aruco = cv2.resize(bee_crop_norm, None, fx=scale_factor, fy=scale_factor, 
-                                                interpolation=cv2.INTER_LANCZOS4)                 
-                    # 3. ArUco Parameters with proportional Rates
-                    try:
+                    if zone_crop.size > 0:
+                        # Reuse the zoom/detect logic
+                        scale_factor = 1.5
+                        zoom = cv2.resize(zone_crop, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_LANCZOS4)
+                        
                         params = cv2.aruco.DetectorParameters()
-                    except AttributeError:
-                        params = cv2.aruco.DetectorParameters_create()
+                        # Detect...
+                        c_crop, ids, _ = cv2.aruco.detectMarkers(zoom, self.aruco_dict, parameters=params)
 
-                    # Using the zoom_for_aruco dimensions for the rate calculation
-                    z_h, z_w = zoom_for_aruco.shape[:2]
-                    max_dim = max(z_h, z_w)
-                    
-                    params.minMarkerPerimeterRate = min_size / max_dim if max_dim > 0 else 0.03
-                    params.maxMarkerPerimeterRate = max_size / max_dim if max_dim > 0 else 4.0
-
-                    c_crop, ids, _ = cv2.aruco.detectMarkers(zoom_for_aruco, self.aruco_dict, parameters=params)
-
-
-                    if ids is not None:
-                        for i, tag_id in enumerate(ids.flatten()):
-                            if tag_id in allowed_ids:
-                                perimeter = cv2.arcLength(c_crop[i], True)
-                                if min_size < perimeter < max_size:
-                                    # Offset corners back to global frame
-                                    global_corners = (c_crop[i]/scale_factor) + np.array([x1, y1])
+                        if ids is not None:
+                            for i, tag_id in enumerate(ids.flatten()):
+                                if tag_id in allowed_ids:
                                     current_tag_id = str(tag_id)
-                                    # Calculate Tag Center for ArUco-mode triggering
-                                    t_cX = int(global_corners[0][:, 0].mean())
-                                    t_cY = int(global_corners[0][:, 1].mean())
-                                    # Check Zone logic using the specific tag in this crop
-                                    if self._is_tag_in_zone((t_cX, t_cY), zone_center, zone_radius):
-                                        aruco_in_zone = True
-                                    cv2.aruco.drawDetectedMarkers(annotated_frame, [global_corners], np.array([[tag_id]]))    
-                # --- EVALUATE TRIGGER BASED ON MODE ---
-                if trigger_mode == "motion":
-                    if motion_in_zone: is_frame_triggered = True
-                elif trigger_mode == "aruco":
-                    if aruco_in_zone: is_frame_triggered = True
-                elif trigger_mode == "both":
-                    if motion_in_zone and aruco_in_zone: is_frame_triggered = True
+                                    is_frame_triggered = True # ArUco found in feeding zone
+                                    # Draw for feedback
+                                    global_corners = (c_crop[i]/scale_factor) + np.array([x1, y1])
+                                    cv2.aruco.drawDetectedMarkers(annotated_frame, [global_corners], np.array([[tag_id]]))
+
+
             if is_frame_triggered:
                 self.frames_out_of_zone_counter = 0  # Reset miss counter
                 self.frames_in_zone_counter = min(self.frames_in_zone_counter + 1,
