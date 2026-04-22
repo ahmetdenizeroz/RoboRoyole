@@ -18,8 +18,8 @@ const int ELECTRODE_PIN_FRONT  = A3;
 
 // ------------------- PERIODIC FEEDING -------------------
 unsigned long lastAutoFeedTime = 0;
-unsigned long autoFeedInterval = 600000UL; //10 mins
-bool autoFeedEnabled = true;
+unsigned long autoFeedInterval = 10000UL; //10 sec
+bool autoFeedEnabled = false;
 
 // ------------------- STEPPER CONFIG -------------------
 AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
@@ -104,23 +104,24 @@ void runStateMachine() {
         }
       }
       
-      if (bOn && !mOn && !fOn) {
+      //if (bOn && !mOn && !fOn) {
+      if (!bOn && !fOn) {
         stepper.stop();
         stepper.setCurrentPosition(stepper.currentPosition());
         disableMotor(); 
       }
-      else if (!bOn && !mOn && !fOn) {
-        //Serial.println("Back Lost, Ejecting"); // RESTORED
-        enableMotor();
-        stepper.setSpeed(stepper.maxSpeed());
-        stepper.runSpeed();
-      }
-      else {
-        //Serial.println("Middle/Front ON, Retracting"); // RESTORED
-        enableMotor();
-        stepper.setSpeed(-stepper.maxSpeed());
-        stepper.runSpeed();
-      }
+      //else if (!bOn && !mOn && !fOn) {
+      //  //Serial.println("Back Lost, Ejecting"); // RESTORED
+      //  enableMotor();
+      //  stepper.setSpeed(stepper.maxSpeed());
+      //  stepper.runSpeed();
+      //}
+      //else {
+      //  //Serial.println("Middle/Front ON, Retracting"); // RESTORED
+      //  enableMotor();
+      //  stepper.setSpeed(-stepper.maxSpeed());
+      //  stepper.runSpeed();
+      //}
       break;
 
     case EJECTING:
@@ -128,7 +129,8 @@ void runStateMachine() {
       {
         long currentTravel = stepper.currentPosition() - ejectStartPos;
         bool distLimitReached = (numberOfSteps > 0 && currentTravel >= (numberOfSteps + margin));
-        bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && mOn && fOn));
+        //bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && mOn && fOn));
+        bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && fOn));
 
         if (sensorsTriggered || distLimitReached) {
           wasSoftStop = distLimitReached; // Record why we stopped
@@ -158,20 +160,21 @@ void runStateMachine() {
       }
       enableMotor(); 
       // Only refill if we DID NOT stop via distance limit (sensor must be trusted)
-      if (!wasSoftStop && bOn && mOn && !fOn) {
-         //Serial.println("Front Lost Refill"); // RESTORED
-         stepper.setSpeed(stepper.maxSpeed() / 2);
-         stepper.runSpeed();
-      }
-      else {
-         stepper.stop();
-         stepper.setCurrentPosition(stepper.currentPosition());
-      }
+      //if (!wasSoftStop && bOn && mOn && !fOn) {
+      //   //Serial.println("Front Lost Refill"); // RESTORED
+      //   stepper.setSpeed(stepper.maxSpeed() / 2);
+      //   stepper.runSpeed();
+      //}
+      //else {
+      //   stepper.stop();
+      //   stepper.setCurrentPosition(stepper.currentPosition());
+      //}
       break;
 
     case RETRACTING:
       enableMotor();
-      if (bOn && !mOn && !fOn) {
+      //if (bOn && !mOn && !fOn) {
+      if (!bOn && !fOn) {  
         // Record new calibration distance
         numberOfSteps = abs(retractStartPos - stepper.currentPosition());
         if (wasSoftStop && numberOfSteps >= margin) {

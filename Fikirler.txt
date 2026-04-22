@@ -1,1 +1,0 @@
-Eğer kraliçe ve işçilerin aynı yerde olduğu deney yapılacaksa ve sadece kraliçe beslenecekse ve aruco düzgün okunamıyorsa, üstünde aruco olan arıların olduğu frameleri kullanarak bir ai eğit bu sayede aruco tanımadan üstünde aruco olan arıyı ayırt edebilirsin.
