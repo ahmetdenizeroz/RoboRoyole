@@ -104,24 +104,23 @@ void runStateMachine() {
         }
       }
       
-      //if (bOn && !mOn && !fOn) {
-      if (!bOn && !fOn) {
+      if (bOn && !mOn && !fOn) {
         stepper.stop();
         stepper.setCurrentPosition(stepper.currentPosition());
         disableMotor(); 
       }
-      //else if (!bOn && !mOn && !fOn) {
-      //  //Serial.println("Back Lost, Ejecting"); // RESTORED
-      //  enableMotor();
-      //  stepper.setSpeed(stepper.maxSpeed());
-      //  stepper.runSpeed();
-      //}
-      //else {
-      //  //Serial.println("Middle/Front ON, Retracting"); // RESTORED
-      //  enableMotor();
-      //  stepper.setSpeed(-stepper.maxSpeed());
-      //  stepper.runSpeed();
-      //}
+      else if (!bOn && !mOn && !fOn) {
+        //Serial.println("Back Lost, Ejecting"); // RESTORED
+        enableMotor();
+        stepper.setSpeed(stepper.maxSpeed());
+        stepper.runSpeed();
+      }
+      else {
+        //Serial.println("Middle/Front ON, Retracting"); // RESTORED
+        enableMotor();
+        stepper.setSpeed(-stepper.maxSpeed());
+        stepper.runSpeed();
+      }
       break;
 
     case EJECTING:
@@ -129,8 +128,7 @@ void runStateMachine() {
       {
         long currentTravel = stepper.currentPosition() - ejectStartPos;
         bool distLimitReached = (numberOfSteps > 0 && currentTravel >= (numberOfSteps + margin));
-        //bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && mOn && fOn));
-        bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && fOn));
+        bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && mOn && fOn));
 
         if (sensorsTriggered || distLimitReached) {
           wasSoftStop = distLimitReached; // Record why we stopped
@@ -159,16 +157,16 @@ void runStateMachine() {
         return;
       }
       enableMotor(); 
-      // Only refill if we DID NOT stop via distance limit (sensor must be trusted)
-      //if (!wasSoftStop && bOn && mOn && !fOn) {
-      //   //Serial.println("Front Lost Refill"); // RESTORED
-      //   stepper.setSpeed(stepper.maxSpeed() / 2);
-      //   stepper.runSpeed();
-      //}
-      //else {
-      //   stepper.stop();
-      //   stepper.setCurrentPosition(stepper.currentPosition());
-      //}
+       //Only refill if we DID NOT stop via distance limit (sensor must be trusted)
+      if (!wasSoftStop && bOn && mOn && !fOn) {
+         //Serial.println("Front Lost Refill"); // RESTORED
+         stepper.setSpeed(stepper.maxSpeed() / 2);
+         stepper.runSpeed();
+      }
+      else {
+         stepper.stop();
+         stepper.setCurrentPosition(stepper.currentPosition());
+      }
       break;
 
     case RETRACTING:
@@ -359,18 +357,21 @@ void processCommand(String cmd) {
     case 'T': 
       if (val >= 0 && val <= 1023) {
         THRESHOLD_BACK = val;
+        B_TRIGGER = THRESHOLD_BACK +  HYSTERISIS_BACK;
         Serial.print("Thresh Back: "); Serial.println(val);
       }
       break;
     case 'U': 
       if (val >= 0 && val <= 1023) {
         THRESHOLD_MIDDLE = val;
+        M_TRIGGER = THRESHOLD_MIDDLE +  HYSTERISIS_MIDDLE; 
         Serial.print("Thresh Mid: "); Serial.println(val);
       }
       break;
     case 'I': 
       if (val >= 0 && val <= 1023) {
         THRESHOLD_FRONT = val; 
+        F_TRIGGER = THRESHOLD_FRONT +  HYSTERISIS_FRONT;
         Serial.print("Thresh Front: "); Serial.println(val);
       }
       break;
