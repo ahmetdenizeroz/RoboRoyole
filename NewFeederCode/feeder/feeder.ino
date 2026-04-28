@@ -127,22 +127,28 @@ void runStateMachine() {
       enableMotor();
       {
         long currentTravel = stepper.currentPosition() - ejectStartPos;
+
         bool distLimitReached = (numberOfSteps > 0 && currentTravel >= (numberOfSteps + margin));
-        bool sensorsTriggered = ((numberOfSteps == 0 || currentTravel >= numberOfSteps) && (bOn && mOn && fOn));
+
+        // Stop immediately when all three sensors are ON
+        bool sensorsTriggered = (bOn && mOn && fOn);
 
         if (sensorsTriggered || distLimitReached) {
-          wasSoftStop = distLimitReached; // Record why we stopped
-          
-          if (wasSoftStop) Serial.println("STATUS: Soft Stop (Distance). Starting HOLD.");
-          else Serial.println("STATUS: Full (Sensors). Starting HOLD.");
-          
+          wasSoftStop = distLimitReached && !sensorsTriggered;
+
+          if (wasSoftStop) {
+            Serial.println("STATUS: Soft Stop (Distance). Starting HOLD.");
+          } else {
+            Serial.println("STATUS: Full (Sensors). Starting HOLD.");
+          }
+
           state = HOLDING;
           holdStartTime = millis();
+
           stepper.stop();
           stepper.setCurrentPosition(stepper.currentPosition());
         } 
         else {
-          // Keep target very far to maintain full speed until logic triggers stop
           stepper.moveTo(2000000000L); 
           stepper.run();
         }

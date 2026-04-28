@@ -1,6 +1,4 @@
 # feeder_gui.py
-# This file creates the PySide6 GUI for the Feeder Controller.
-# It imports and controls the 'FeederController' class from 'feeder_core.py'.
 import sys
 import time
 import numpy as np

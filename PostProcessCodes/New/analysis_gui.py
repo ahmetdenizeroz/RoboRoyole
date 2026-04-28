@@ -36,14 +36,14 @@ if _missing:
     sys.exit(1)
 
 try:
-    import analysis_core_v5 as analysis_core
+    import analysis_core as analysis_core
 except ImportError:
     local_core = Path(__file__).with_name("analysis_core_v5.py")
     if not local_core.exists():
         print("FATAL: Could not find analysis_core_v5.py in the same directory.")
         sys.exit(1)
     sys.path.insert(0, str(local_core.parent))
-    import analysis_core_v5 as analysis_core
+    import analysis_core as analysis_core
 
 from PySide6 import QtCore, QtWidgets
 
