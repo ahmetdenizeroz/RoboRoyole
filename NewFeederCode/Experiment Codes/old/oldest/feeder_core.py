@@ -5,7 +5,7 @@ import numpy as np
 import time
 import serial
 import threading
-from PySide6.QtCore import QObject, Signal, Slot, QTimer
+from PySide6.QtCore import QObject, Signal, Slot
 import os
 import psutil
 
@@ -32,9 +32,6 @@ class FeederController(QObject):
     recording_toggled = Signal(bool)  # Emits the recording state
     zone_updated = Signal(int, int, int)
     arduino_send_failed = Signal(str)
-    arduino_health_changed = Signal(bool)
-    arduino_recovery_changed = Signal(bool)
-    arduino_auto_restart_finished = Signal(bool)
 
     def __init__(self):
         super().__init__()
@@ -47,22 +44,11 @@ class FeederController(QObject):
         self.log_file = None
         self.cap = None
         self.arduino = None
-        self.arduino_healthy = False
-        self.pump_recovering = False
-        self.auto_restart_enabled = True
-        self.last_arduino_port = None
-        self.restart_attempts = 0
-        self.max_restart_attempts = 3
-        self.restart_delay_ms = 1500
-        self.recovery_restart_pending = False
-        self.recovery_settle_ms = 3000
-        self.auto_feed_blocked_until_exit = False
         self.is_processing = False
         self.is_recording = False
         self.processing_thread = None  # Renamed for clarity
         self.settings_lock = threading.Lock()  # Protects self.settings
         self.arduino_send_failed.connect(self._handle_arduino_send_failed)
-        self.arduino_auto_restart_finished.connect(self._on_auto_restart_finished)
 
         # --- ArUco Setup ---
         base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -135,24 +121,6 @@ class FeederController(QObject):
     # ===================================
     #  Hardware Connection
     # ===================================
-
-    def _set_arduino_healthy(self, healthy: bool):
-        """Update Arduino health state and notify the GUI only when it changes."""
-        healthy = bool(healthy)
-        if self.arduino_healthy == healthy:
-            return
-
-        self.arduino_healthy = healthy
-        self.arduino_health_changed.emit(healthy)
-
-    def _set_pump_recovering(self, recovering: bool):
-        """Update pump recovery state and notify the GUI only when it changes."""
-        recovering = bool(recovering)
-        if self.pump_recovering == recovering:
-            return
-
-        self.pump_recovering = recovering
-        self.arduino_recovery_changed.emit(recovering)
 
     def connect_camera(self, index=0):
         """(GUI Thread) Now non-blocking. Launches a background thread to open the camera."""
@@ -227,7 +195,6 @@ class FeederController(QObject):
 
     def connect_arduino(self, port):
         """(Worker Thread) Connects to the Arduino."""
-        self.last_arduino_port = port
         try:
             self.status_updated.emit(f"Connecting to Arduino on {port}...")
             self._log_to_file(f"Connecting to Arduino on {port}...")
@@ -250,7 +217,6 @@ class FeederController(QObject):
             self.arduino_reader.error_received.connect(self.on_arduino_reader_error)
             self.arduino_reader.disconnected.connect(self.on_arduino_reader_disconnected)
             self.arduino_reader.start()
-            self._set_arduino_healthy(True)
             self.status_updated.emit("Arduino reader thread started.")
             self._log_to_file("Arduino reader thread started.")
             self.status_updated.emit("Arduino connected. Applying all settings...")
@@ -261,7 +227,6 @@ class FeederController(QObject):
             self.status_updated.emit(f"Arduino Error: {e}")
             self._log_to_file(f"Arduino Error: {e}")
 
-            self._set_arduino_healthy(False)
             if self.arduino:
                 self._close_serial_in_background(self.arduino)
             self.arduino = None
@@ -277,7 +242,7 @@ class FeederController(QObject):
                 self._log_to_file(f"Error closing Arduino serial: {e}")
 
         threading.Thread(target=closer, daemon=True).start()    
-    def stop_arduino(self, *, manual: bool = False):
+    def stop_arduino(self):
         """Disconnect Arduino safely without racing serial writes."""
 
         # First detach shared objects under lock.
@@ -286,16 +251,6 @@ class FeederController(QObject):
             reader = self.arduino_reader
             self.arduino = None
             self.arduino_reader = None
-
-        self._set_arduino_healthy(False)
-        if manual:
-            self._set_pump_recovering(False)
-            self.restart_attempts = 0
-            self.recovery_restart_pending = False
-        self.is_feeding = False
-        self.frames_in_zone_counter = 0
-        self.frames_out_of_zone_counter = 0
-        self.auto_feed_blocked_until_exit = False
 
         # Stop reader outside the serial lock.
         if reader:
@@ -321,17 +276,16 @@ class FeederController(QObject):
         self.status_updated.emit("All systems stopped.")
         self._log_to_file("All systems stopped.")
 
-    def _send_to_arduino(self, command: str) -> bool:
-        """Send a command to Arduino. Returns True only if the write was attempted successfully."""
+    def _send_to_arduino(self, command: str):
+        """Send a command to Arduino without allowing serial failure to freeze GUI."""
         error_msg = None
 
         with self.serial_lock:
-            if (not self.arduino_healthy) or (not self.arduino) or (not self.arduino.is_open):
-                return False
+            if not self.arduino or not self.arduino.is_open:
+                return
 
             try:
                 self.arduino.write(command.encode("ascii"))
-                return True
             except Exception as e:
                 error_msg = f"Arduino Send Error while sending {repr(command)}: {repr(e)}"
 
@@ -340,8 +294,6 @@ class FeederController(QObject):
             self.status_updated.emit(error_msg)
             self._log_to_file(error_msg)
             self.arduino_send_failed.emit(error_msg)
-
-        return False
 
     # ===================================
     #  Settings Updates
@@ -525,133 +477,25 @@ class FeederController(QObject):
             self.settings["zone_center"] = (x, y)
             self.settings["zone_radius"] = r
 
-    def _schedule_arduino_restart(self):
-        """Schedule a single restart attempt if one is not already pending."""
-        if self.recovery_restart_pending:
-            return
-        self.recovery_restart_pending = True
-        self.status_updated.emit("Automatic Arduino restart scheduled.")
-        self._log_to_file("Automatic Arduino restart scheduled.")
-        QTimer.singleShot(self.restart_delay_ms, self._attempt_arduino_restart)
-
-    def _begin_arduino_recovery(self, reason: str):
-        """Enter automatic Arduino recovery without stopping camera/recording."""
-        self.status_updated.emit(f"Arduino failure detected: {reason}")
-        self._log_to_file(f"Arduino failure detected: {reason}")
-
-        self.is_feeding = False
-        self.frames_in_zone_counter = 0
-        self.frames_out_of_zone_counter = 0
-        self.auto_feed_blocked_until_exit = False
-        self._set_pump_recovering(True)
-
-        # Detach/close the broken serial connection safely. This does not schedule
-        # recovery by itself; recovery is scheduled below.
-        self.stop_arduino(manual=False)
-
-        if not self.auto_restart_enabled:
-            self.status_updated.emit("Automatic Arduino restart is disabled. Pump remains disabled.")
-            self._log_to_file("Automatic Arduino restart is disabled. Pump remains disabled.")
-            return
-
-        if not self.last_arduino_port:
-            self.status_updated.emit("Automatic Arduino restart failed: no previous serial port stored.")
-            self._log_to_file("Automatic Arduino restart failed: no previous serial port stored.")
-            self._set_pump_recovering(False)
-            return
-
-        self._schedule_arduino_restart()
-
-    def _attempt_arduino_restart(self):
-        """Start one Arduino reconnect attempt in a background thread."""
-        self.recovery_restart_pending = False
-        if not self.pump_recovering:
-            return
-
-        if self.restart_attempts >= self.max_restart_attempts:
-            self.status_updated.emit("Automatic Arduino recovery failed: max attempts reached. Pump disabled.")
-            self._log_to_file("Automatic Arduino recovery failed: max attempts reached. Pump disabled.")
-            self.recovery_restart_pending = False
-            self._set_pump_recovering(False)
-            self._set_arduino_healthy(False)
-            return
-
-        self.restart_attempts += 1
-        self.status_updated.emit(
-            f"Automatic Arduino restart attempt {self.restart_attempts}/{self.max_restart_attempts}..."
-        )
-        self._log_to_file(
-            f"Automatic Arduino restart attempt {self.restart_attempts}/{self.max_restart_attempts}..."
-        )
-
-        port = self.last_arduino_port
-
-        def worker():
-            success = self.connect_arduino(port)
-            self.arduino_auto_restart_finished.emit(bool(success))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    @Slot(bool)
-    def _on_auto_restart_finished(self, success: bool):
-        """Handle result of background Arduino reconnect attempt."""
-        if not self.pump_recovering:
-            return
-
-        if not success:
-            self.status_updated.emit("Automatic Arduino restart attempt failed. Retrying...")
-            self._log_to_file("Automatic Arduino restart attempt failed. Retrying...")
-            self._schedule_arduino_restart()
-            return
-
-        self.status_updated.emit("Arduino reconnected. Restoring Waiting Mode...")
-        self._log_to_file("Arduino reconnected. Restoring Waiting Mode...")
-
-        # connect_arduino() already resent settings. Now put the pump back into its
-        # safe standby behavior before re-arming auto-feed.
-        if not self._send_to_arduino('W\n'):
-            self.status_updated.emit("Recovery failed: could not send Waiting Mode command.")
-            self._log_to_file("Recovery failed: could not send Waiting Mode command.")
-            self._schedule_arduino_restart()
-            return
-
-        QTimer.singleShot(self.recovery_settle_ms, self._finish_arduino_recovery)
-
-    def _finish_arduino_recovery(self):
-        """Re-arm auto-feeding after Arduino reconnect + waiting-mode settling delay."""
-        if not self.arduino_healthy:
-            self.status_updated.emit("Recovery settling failed: Arduino is not healthy. Retrying...")
-            self._log_to_file("Recovery settling failed: Arduino is not healthy. Retrying...")
-            self._schedule_arduino_restart()
-            return
-
-        self.is_feeding = False
-        self.frames_in_zone_counter = 0
-        self.frames_out_of_zone_counter = 0
-        self.auto_feed_blocked_until_exit = False
-        self.restart_attempts = 0
-        self.recovery_restart_pending = False
-        self._set_pump_recovering(False)
-
-        self.status_updated.emit("Arduino recovery complete. Auto-feeding re-armed.")
-        self._log_to_file("Arduino recovery complete. Auto-feeding re-armed.")
-        self.log_pump_event("ARDUINO_RECOVERY_COMPLETE", "SYSTEM")
-
     @Slot(str)
     def _handle_arduino_send_failed(self, msg: str):
-        self._begin_arduino_recovery(msg)
+        self.status_updated.emit("Arduino communication marked unhealthy. Disconnecting safely.")
+        self._log_to_file("Arduino communication marked unhealthy. Disconnecting safely.")
+        self.stop_arduino()
 
     @Slot(str)
     def on_arduino_reader_error(self, msg):
-        self._begin_arduino_recovery(msg)
+        self.status_updated.emit(msg)
+        self._log_to_file(msg)
+        self.status_updated.emit("Arduino reader error detected. Disconnecting safely.")
+        self._log_to_file("Arduino reader error detected. Disconnecting safely.")
+        self.stop_arduino()
 
 
     @Slot(str)
     def on_arduino_reader_disconnected(self, msg):
         self.status_updated.emit(msg)
         self._log_to_file(msg)
-        if self.arduino_healthy and not self.pump_recovering:
-            self._begin_arduino_recovery(f"Arduino reader disconnected unexpectedly: {msg}")
 
     # ===================================
     #  Pump & Recording Controls
@@ -679,10 +523,6 @@ class FeederController(QObject):
     @Slot()
     def start_motor_waiting_mode(self):
         """(GUI Thread) Tell Arduino to enter 'Waiting' mode."""
-        if self.pump_recovering or not self.arduino_healthy:
-            self.status_updated.emit("Cannot start waiting mode: Arduino unavailable/recovering.")
-            self._log_to_file("Cannot start waiting mode: Arduino unavailable/recovering.")
-            return
         self.status_updated.emit("Starting Motor (Waiting Mode)...")
         self._log_to_file("Starting Motor (Waiting Mode)...")
 
@@ -691,10 +531,6 @@ class FeederController(QObject):
     @Slot()
     def prime_pump(self):
         """(GUI Thread) Manually run the eject/prime command."""
-        if self.pump_recovering or not self.arduino_healthy:
-            self.status_updated.emit("Manual eject ignored: Arduino unavailable/recovering.")
-            self._log_to_file("Manual eject ignored: Arduino unavailable/recovering.")
-            return
         self.status_updated.emit("Manual Prime/Eject command sent.")
         self._log_to_file("Manual Prime/Eject command sent.")
 
@@ -704,10 +540,6 @@ class FeederController(QObject):
     @Slot()
     def retract_pump(self):
         """(GUI Thread) Manually run the retract command."""
-        if self.pump_recovering or not self.arduino_healthy:
-            self.status_updated.emit("Manual retract ignored: Arduino unavailable/recovering.")
-            self._log_to_file("Manual retract ignored: Arduino unavailable/recovering.")
-            return
         self.status_updated.emit("Manual Retract command sent.")
         self._log_to_file("Manual Retract command sent.")
 
@@ -717,10 +549,6 @@ class FeederController(QObject):
     @Slot()
     def stop_pump(self):
         """(GUI Thread) Manually send a STOP command."""
-        if self.pump_recovering or not self.arduino_healthy:
-            self.status_updated.emit("Manual STOP ignored: Arduino unavailable/recovering.")
-            self._log_to_file("Manual STOP ignored: Arduino unavailable/recovering.")
-            return
         self.status_updated.emit("Manual STOP command sent.")
         self._log_to_file("Manual STOP command sent.")
 
@@ -730,10 +558,6 @@ class FeederController(QObject):
     @Slot()
     def reset_calibration(self):
         """(GUI Thread) Resets the soft stop step calibration on Arduino."""
-        if self.pump_recovering or not self.arduino_healthy:
-            self.status_updated.emit("Calibration reset ignored: Arduino unavailable/recovering.")
-            self._log_to_file("Calibration reset ignored: Arduino unavailable/recovering.")
-            return
         self.status_updated.emit("Resetting step calibration...")
         self._log_to_file("Resetting step calibration...")
         self._send_to_arduino('K\n')
@@ -1308,25 +1132,11 @@ class FeederController(QObject):
 
     def _handle_feed_state_transition(self, current_tag_id, entry_frames_target, exit_frames_target):
         if not self.is_feeding and (self.frames_in_zone_counter >= entry_frames_target):
-            if (not self.arduino_healthy) or self.pump_recovering:
-                if not self.auto_feed_blocked_until_exit:
-                    self.status_updated.emit("Auto-feed blocked: Arduino unavailable/recovering.")
-                    self._log_to_file("Auto-feed blocked: Arduino unavailable/recovering.")
-                    self.log_pump_event("AUTO_FEED_BLOCKED_ARDUINO_UNAVAILABLE_OR_RECOVERING", current_tag_id)
-                    self.auto_feed_blocked_until_exit = True
-                self.frames_in_zone_counter = 0
-                return
-
+            self.is_feeding = True
             self.status_updated.emit(f"Tag {current_tag_id} confirmed. Sending FEED command.")
             self._log_to_file(f"Tag {current_tag_id} confirmed. Sending FEED command.")
-
-            if self._send_to_arduino('F\n'):
-                self.is_feeding = True
-                self.log_pump_event("AUTO_FEED", current_tag_id)
-            else:
-                self.is_feeding = False
-                self.log_pump_event("AUTO_FEED_FAILED_SEND", current_tag_id)
-
+            self._send_to_arduino('F\n')
+            self.log_pump_event("AUTO_FEED", current_tag_id)
             self.frames_in_zone_counter = 0
 
         elif self.is_feeding and (self.frames_out_of_zone_counter >= exit_frames_target):
@@ -1335,10 +1145,6 @@ class FeederController(QObject):
             self._log_to_file("Tag lost. Re-arming trigger.")
             self.log_pump_event("TAG_LOST_REARM", "N/A")
             self.frames_out_of_zone_counter = 0
-            self.auto_feed_blocked_until_exit = False
-
-        elif (not self.is_feeding) and (self.frames_out_of_zone_counter >= exit_frames_target):
-            self.auto_feed_blocked_until_exit = False
 
     def _draw_main_overlays(self, annotated_frame, original_frame, frame_info, settings, fps):
         zone_center = settings["zone_center"]

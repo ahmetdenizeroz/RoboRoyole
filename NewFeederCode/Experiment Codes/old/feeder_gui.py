@@ -52,7 +52,6 @@ class MainWindow(QMainWindow):
         self.controller.recording_toggled.connect(self.update_record_button_style)
         self.controller.zone_updated.connect(self.canvas_window.update_zone_visual)
         self.controller.arduino_health_changed.connect(self.on_arduino_health_changed)
-        self.controller.arduino_recovery_changed.connect(self.on_arduino_recovery_changed)
         self.canvas_window.zone_selected.connect(self.controller.set_feeding_zone)
 
         # Worker thread for blocking tasks
@@ -690,8 +689,7 @@ class MainWindow(QMainWindow):
             self.btn_record.setStyleSheet("background-color: #4CAF50; color: white; padding: 10px;")
 
     def set_arduino_controls_enabled(self, enabled: bool):
-        """Enable only controls that require a healthy, non-recovering Arduino."""
-        allowed = bool(enabled) and not getattr(self.controller, "pump_recovering", False)
+        """Enable only controls that require a healthy Arduino connection."""
         for widget in (
             self.btn_apply_motor,
             self.btn_apply_electrodes,
@@ -701,28 +699,12 @@ class MainWindow(QMainWindow):
             self.btn_manual_retract,
             self.btn_stop_motor,
         ):
-            widget.setEnabled(allowed)
+            widget.setEnabled(enabled)
 
-    def _reset_waiting_button_without_command(self):
-        """Reset waiting toggle without emitting STOP/W commands."""
-        if self.btn_start_waiting.isChecked():
-            self.btn_start_waiting.blockSignals(True)
-            self.btn_start_waiting.setChecked(False)
-            self.btn_start_waiting.blockSignals(False)
-        self.btn_start_waiting.setText("Start Motor (Waiting Mode)")
-
-    def _refresh_arduino_connection_ui(self):
-        healthy = getattr(self.controller, "arduino_healthy", False)
-        recovering = getattr(self.controller, "pump_recovering", False)
-
+    @Slot(bool)
+    def on_arduino_health_changed(self, healthy: bool):
+        """Update GUI controls when Arduino becomes available/unavailable."""
         self.set_arduino_controls_enabled(healthy)
-
-        if recovering:
-            self._reset_waiting_button_without_command()
-            self.btn_connect_arduino.setText("Recovering Arduino...")
-            self.btn_connect_arduino.setStyleSheet("background-color: #FFA000; color: black;")
-            self.btn_connect_arduino.setEnabled(False)
-            return
 
         if healthy:
             self.btn_connect_arduino.setText("Disconnect Arduino")
@@ -730,20 +712,17 @@ class MainWindow(QMainWindow):
             self.btn_connect_arduino.setEnabled(True)
             return
 
-        self._reset_waiting_button_without_command()
+        # If Arduino failed while waiting mode button was checked, reset the UI without
+        # sending another STOP command through the toggled signal.
+        if self.btn_start_waiting.isChecked():
+            self.btn_start_waiting.blockSignals(True)
+            self.btn_start_waiting.setChecked(False)
+            self.btn_start_waiting.blockSignals(False)
+        self.btn_start_waiting.setText("Start Motor (Waiting Mode)")
+
         self.btn_connect_arduino.setText("Connect Arduino")
         self.btn_connect_arduino.setStyleSheet("")
         self.btn_connect_arduino.setEnabled(True)
-
-    @Slot(bool)
-    def on_arduino_health_changed(self, healthy: bool):
-        """Update GUI controls when Arduino becomes available/unavailable."""
-        self._refresh_arduino_connection_ui()
-
-    @Slot(bool)
-    def on_arduino_recovery_changed(self, recovering: bool):
-        """Update GUI controls while automatic Arduino recovery is running."""
-        self._refresh_arduino_connection_ui()
 
     # --- Connection Slots ---
 
@@ -779,10 +758,6 @@ class MainWindow(QMainWindow):
 
     def toggle_arduino(self):
         """Connect or disconnect the Arduino in a worker thread."""
-        if getattr(self.controller, "pump_recovering", False):
-            self.log_status("Arduino is recovering automatically. Manual connect/disconnect is disabled for now.")
-            return
-
         if not self.controller.arduino:
             port = self.port_combo.currentText()
             if not port or "No ports found" in port:
@@ -802,7 +777,7 @@ class MainWindow(QMainWindow):
             if self.btn_start_waiting.isChecked():
                 self.btn_start_waiting.setChecked(False)  # This will call toggle_waiting_mode
 
-            self.controller.stop_arduino(manual=True)
+            self.controller.stop_arduino()
             self.set_arduino_controls_enabled(False)
             self.btn_connect_arduino.setText("Connect Arduino")
             self.btn_connect_arduino.setStyleSheet("")  # Reset style
@@ -811,10 +786,17 @@ class MainWindow(QMainWindow):
     @Slot(bool, str)
     def on_arduino_connected(self, success, message):
         """Callback for when the Arduino worker thread finishes."""
-        if not success:
+        self.btn_connect_arduino.setEnabled(True)
+        if success:
+            self.set_arduino_controls_enabled(True)
+            self.btn_connect_arduino.setText("Disconnect Arduino")
+            self.btn_connect_arduino.setStyleSheet("background-color: #D32F2F;")  # Red
+        else:
+            self.set_arduino_controls_enabled(False)
             self.log_status(f"Arduino connection failed: {message}")
+            self.btn_connect_arduino.setText("Connect Arduino")
+            self.btn_connect_arduino.setStyleSheet("")  # Reset style
 
-        self._refresh_arduino_connection_ui()
         self.worker = None  # Clear the worker
     # --- Settings Slots ---
 
@@ -916,9 +898,9 @@ class MainWindow(QMainWindow):
         """Handle the 'Start/Stop Motor (Waiting Mode)' toggle."""
         if checked:
             # --- Start Waiting Mode ---
-            if (not getattr(self.controller, "arduino_healthy", False)) or getattr(self.controller, "pump_recovering", False):
-                self.log_status("Cannot start motor: Arduino not connected/healthy or recovering.")
-                self._reset_waiting_button_without_command()
+            if not getattr(self.controller, "arduino_healthy", False):
+                self.log_status("Cannot start motor: Arduino not connected/healthy.")
+                self.btn_start_waiting.setChecked(False)  # Revert toggle
                 return
 
             self.controller.start_motor_waiting_mode()  # Sends 'W'
@@ -927,8 +909,7 @@ class MainWindow(QMainWindow):
 
         else:
             # --- Stop Waiting Mode ---
-            if getattr(self.controller, "arduino_healthy", False) and not getattr(self.controller, "pump_recovering", False):
-                self.controller.stop_pump()  # Sends 'S'
+            self.controller.stop_pump()  # Sends 'S'
             self.btn_start_waiting.setText("Start Motor (Waiting Mode)")
             # Style is set by :unchecked
 

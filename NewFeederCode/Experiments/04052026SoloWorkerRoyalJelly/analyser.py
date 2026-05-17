@@ -29,6 +29,24 @@ os.environ['TESSDATA_PREFIX'] = TESSDATA_DIR
 CROP_Y1, CROP_Y2 = 650, 720
 CROP_X1, CROP_X2 = 1100, 1280
 
+# --- LOG PARSING SETTINGS ---
+# The current log format is like:
+# [2026-05-04 12:00:15] [Arduino]: SENSORS: B=ON 535 M=OFF 314 F=OFF 235 | Pattern: WAITING_TARGET | State: WAITING
+# These regexes also support the older format without the Pattern field:
+# ... SENSORS: B=ON 535 M=OFF 314 F=OFF 235 | State: WAITING
+F_THRESHOLD = 300
+TIME_PATTERN = re.compile(r'^\[([\d\-\s:]+)\]')
+F_VALUE_PATTERN = re.compile(r'F=(?:ON|OFF)\s+(\d+)')
+SENSOR_LINE_PATTERN = re.compile(
+    r"SENSORS:\s*"
+    r"B=(?:ON|OFF)\s+(\d+)\s+"
+    r"M=(?:ON|OFF)\s+(\d+)\s+"
+    r"F=(?:ON|OFF)\s+(\d+)"
+    r"(?:\s+\|\s+Pattern:\s+[^|]+)?"
+    r"\s+\|\s+State:\s+(\w+)"
+)
+STATE_PATTERN = re.compile(r'\|\s*State:\s*(\w+)')
+
 def validate_aruco_tags(file_path, expected_tags):
     """
     Compares detected Aruco IDs in the log against a list of expected IDs.
@@ -174,15 +192,14 @@ def number_of_lines(file_path, target_tags):
                         break # Found the bee, no need to check other tags for this line
                 
             # 4. Check for state information
-            if "| State: " in clean_line:
-                # We split the line and take the part after 'State: '
-                # e.g., "... | State: HOLDING" -> "HOLDING"
-                try:
-                    current_state = clean_line.split("State: ")[1].split()[0]
-                    if current_state in state_counts:
-                        state_counts[current_state] += 1
-                except IndexError:
-                    continue
+            # Supports both:
+            #   ... | State: HOLDING
+            #   ... | Pattern: FULL | State: HOLDING
+            state_match = STATE_PATTERN.search(clean_line)
+            if state_match:
+                current_state = state_match.group(1)
+                if current_state in state_counts:
+                    state_counts[current_state] += 1
 
     # 5. Print the multi-bee results
     print(f"\n--- Multi-Bee Log Analysis ---")
@@ -531,7 +548,7 @@ def plot_f_sensor_over_time(file_path, duration_str=None):
             # ----------------------------
 
             # Extract the F sensor value using regex
-            f_match = re.search(r'F=(?:ON|OFF)(\d+)', clean_line)
+            f_match = F_VALUE_PATTERN.search(clean_line)
             
             if f_match:
                 # If we got both a valid time and a valid sensor reading, save them
@@ -578,13 +595,12 @@ def plot_f_sensor_binary(file_path, duration_str=None):
     f_binary_values = []
     start_time = None
 
-    # 2. Updated Regex Patterns
+    # 2. Shared Regex Patterns
     # Matches the timestamp: [2026-03-23 18:41:55]
-    time_pattern = re.compile(r'^\[([\d\-\s:]+)\]')
+    time_pattern = TIME_PATTERN
     
-    # Matches "F=", followed by ON/OFF, a SPACE, and then the digits
-    # Example: F=OFF 11 or F=ON 440
-    f_pattern = re.compile(r'F=(?:ON|OFF)\s+(\d+)')
+    # Matches examples such as F=OFF 11 or F=ON 440
+    f_pattern = F_VALUE_PATTERN
 
     with open(file_path, 'r') as file:
         for line in file:
@@ -612,8 +628,8 @@ def plot_f_sensor_binary(file_path, duration_str=None):
             f_match = f_pattern.search(line)
             if f_match:
                 f_raw_value = int(f_match.group(1))
-                # Binary threshold: 1 if > 300, else 0
-                f_binary_values.append(1 if f_raw_value > 300 else 0)
+                # Binary threshold: 1 if above F_THRESHOLD, else 0
+                f_binary_values.append(1 if f_raw_value > F_THRESHOLD else 0)
                 times.append(current_time)
 
     # 5. Generate the Plot
@@ -626,7 +642,7 @@ def plot_f_sensor_binary(file_path, duration_str=None):
         
         # Formatting
         plt.ylim(-0.2, 1.2)
-        plt.yticks([0, 1], ['Normal (<= 300)', 'Triggered (> 300)']) 
+        plt.yticks([0, 1], [f'Normal (<= {F_THRESHOLD})', f'Triggered (> {F_THRESHOLD})']) 
         
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
         plt.gcf().autofmt_xdate()
@@ -906,13 +922,12 @@ def analyze_baselines(file_path):
         'HOLDING': {'B': [], 'M': [], 'F': []}
     }
 
-    # Regex to handle your new format: "B=ON 603 M=ON 353 F=OFF 84 | State: EJECTING"
-    # This captures the digits regardless of ON/OFF status
-    pattern = r"B=(?:ON|OFF)\s+(\d+)\s+M=(?:ON|OFF)\s+(\d+)\s+F=(?:ON|OFF)\s+(\d+)\s+\|\s+State:\s+(\w+)"
+    # Captures B/M/F raw values and state. Supports both old syntax and new syntax with Pattern field.
+    pattern = SENSOR_LINE_PATTERN
 
     with open(file_path, 'r') as f:
         for line in f:
-            match = re.search(pattern, line)
+            match = pattern.search(line)
             if match:
                 b_val = int(match.group(1))
                 m_val = int(match.group(2))
@@ -960,7 +975,8 @@ def plot_full_cycle_averages(file_path):
     active_state = 'WAIT_PRE'
     is_capturing = False
 
-    pattern = r"B=(?:ON|OFF)\s+(\d+)\s+M=(?:ON|OFF)\s+(\d+)\s+F=(?:ON|OFF)\s+(\d+)\s+\|\s+State:\s+(\w+)"
+    # Captures B/M/F raw values and state. Supports both old syntax and new syntax with Pattern field.
+    pattern = SENSOR_LINE_PATTERN
 
     # 2. Extract Cycles
     with open(file_path, 'r') as f:
@@ -970,7 +986,7 @@ def plot_full_cycle_averages(file_path):
                 is_capturing = True
                 active_state = 'EJECTING'
                 continue
-            elif "STATUS: Full (B+M+F)" in line:
+            elif "STATUS: Full (B+M+F)" in line or "Starting HOLD" in line:
                 active_state = 'HOLDING'
                 continue
             elif "STATUS: Hold time over" in line:
@@ -981,7 +997,7 @@ def plot_full_cycle_averages(file_path):
                 # Give it a few more lines of wait before closing cycle
                 continue
 
-            match = re.search(pattern, line)
+            match = pattern.search(line)
             if match and is_capturing:
                 b, m, f_val, state = int(match.group(1)), int(match.group(2)), int(match.group(3)), match.group(4)
                 
@@ -1111,9 +1127,9 @@ def plot_complete_bee_analysis(file_path, target_tags, duration_str=None):
     in_auto_feed = False
     start_time = None
     
-    # Regex Patterns (Your existing logic)
-    time_pat = re.compile(r'^\[([\d\-\s:]+)\]')
-    f_pat = re.compile(r'F=(?:ON|OFF)\s+(\d+)')
+    # Regex Patterns
+    time_pat = TIME_PATTERN
+    f_pat = F_VALUE_PATTERN
     sec_pat = re.compile(r'Possible feeding detected at secondary zone:\s+([\d.]+)')
     steps_pat = re.compile(r'number_of_steps set:\s+(\d+)')
     
@@ -1127,7 +1143,7 @@ def plot_complete_bee_analysis(file_path, target_tags, duration_str=None):
             if start_time is None: start_time = curr_time
             if time_limit and (curr_time - start_time) > time_limit: break
 
-            if "AUTO FEED: Triggered" in line:
+            if "AUTO FEED: Triggered" in line or "| AUTO_FEED |" in line:
                 in_auto_feed = True
             elif "Retract Complete" in line or "Entering WAITING" in line:
                 in_auto_feed = False
@@ -1143,7 +1159,7 @@ def plot_complete_bee_analysis(file_path, target_tags, duration_str=None):
                     times.append(curr_time)
                     f_raw.append(val)
                     
-                    is_on = 1 if val > 300 else 0
+                    is_on = 1 if val > F_THRESHOLD else 0
                     if in_auto_feed and is_on:
                         f_bin_autofeed.append(1); f_bin_normal.append(0)
                     elif is_on:
@@ -1186,7 +1202,7 @@ def plot_complete_bee_analysis(file_path, target_tags, duration_str=None):
 
     # Panel 3: F-Sensor Raw
     fig.add_trace(go.Scatter(x=times, y=f_raw, name="Raw F-Value", line=dict(color='teal', width=1)), row=3, col=1)
-    fig.add_trace(go.Scatter(x=times, y=[300]*len(times), name="Threshold", line=dict(color='red', dash='dash')), row=3, col=1)
+    fig.add_trace(go.Scatter(x=times, y=[F_THRESHOLD]*len(times), name=f"Threshold ({F_THRESHOLD})", line=dict(color='red', dash='dash')), row=3, col=1)
 
     # Panel 4: Secondary Zone (Chains)
     # Mapping chains to 1s
@@ -1225,45 +1241,56 @@ def plot_complete_bee_analysis(file_path, target_tags, duration_str=None):
     fig.show()
 
 def extract_feed_sequence_clips_no_drift_from_csv(
-        sequence_csv,
-        log_file,
-        video_file,
-        output_folder="feed_sequence_clips",
-        pre_pad_sec=2.0,
-        post_pad_sec=3.0,
-        accurate_cut=False,
-        skip_zero_duration=True
-    ):
-        """
-        Extracts clips using feed_sequence_durations.csv.
+    sequence_csv,
+    log_file,
+    video_file,
+    output_folder="feed_sequence_clips",
+    pre_pad_sec=2.0,
+    post_pad_sec=3.0,
+    accurate_cut=False,
+    skip_zero_duration=True,
+    recording_start_override=None
+):
+    """
+    Extracts feed sequence clips using feed_sequence_durations.csv.
 
-        Assumption:
-            No drift between log and video.
+    Assumption:
+        No drift between log and video.
 
-        Video time is calculated as:
-            video_time = CSV Tag Time - log Recording started time
+    Video time is calculated as:
+        video_time = CSV Tag Time - log Recording started time
 
-        CSV must contain:
-            Tag ID,
-            Tag Time,
-            Eject Time (s),
-            Hold Time (s),
-            Retract Time (s),
-            Detected During Retract
-        """
+    CSV must contain:
+        Tag ID,
+        Tag Time,
+        Eject Time (s),
+        Hold Time (s),
+        Retract Time (s),
+        Detected During Retract
 
-        os.makedirs(output_folder, exist_ok=True)
+    If the log does not contain a 'Recording started:' line, you can manually pass:
+        recording_start_override="2026-05-04 12:00:00"
+    """
 
-        # -------------------------------------------------
-        # 1. Find video/log zero time from TXT log
-        # -------------------------------------------------
-        recording_start_time = None
-        time_pattern = re.compile(r'^\[([\d\-\s:]+)\]')
+    os.makedirs(output_folder, exist_ok=True)
 
+    # -------------------------------------------------
+    # 1. Find video/log zero time from TXT log
+    # -------------------------------------------------
+    recording_start_time = None
+
+    if recording_start_override is not None:
+        recording_start_time = datetime.strptime(
+            recording_start_override,
+            "%Y-%m-%d %H:%M:%S"
+        )
+        print(f"Using manual recording start time: {recording_start_time}")
+
+    else:
         with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
             for line in f:
                 if "Recording started:" in line and ".mp4" in line:
-                    m = time_pattern.search(line)
+                    m = TIME_PATTERN.search(line)
                     if m:
                         recording_start_time = datetime.strptime(
                             m.group(1),
@@ -1273,215 +1300,713 @@ def extract_feed_sequence_clips_no_drift_from_csv(
 
         if recording_start_time is None:
             print("ERROR: Could not find 'Recording started:' line in log.")
+            print("Use recording_start_override='YYYY-MM-DD HH:MM:SS' if needed.")
             return
 
         print(f"Recording start time: {recording_start_time}")
 
+    # -------------------------------------------------
+    # 2. Read CSV and cut clips
+    # -------------------------------------------------
+    summary_path = os.path.join(output_folder, "clip_extraction_summary.csv")
+
+    total_rows = 0
+    saved_clips = 0
+    skipped_rows = 0
+
+    with open(sequence_csv, "r", newline="", encoding="utf-8", errors="ignore") as infile, \
+         open(summary_path, "w", newline="", encoding="utf-8") as summary_file:
+
+        reader = csv.DictReader(infile)
+        writer = csv.writer(summary_file)
+
+        writer.writerow([
+            "Clip Index",
+            "Tag ID",
+            "Tag Time",
+            "Raw Video Start (s)",
+            "Video Start (s)",
+            "Clip Duration (s)",
+            "Eject Time (s)",
+            "Hold Time (s)",
+            "Retract Time (s)",
+            "Detected During Retract",
+            "Output File",
+            "Status"
+        ])
+
+        for row in reader:
+            total_rows += 1
+
+            try:
+                tag_id = row["Tag ID"]
+                tag_time_str = row["Tag Time"]
+
+                tag_time = datetime.strptime(
+                    tag_time_str,
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
+                eject_time = float(row["Eject Time (s)"])
+                hold_time = float(row["Hold Time (s)"])
+                retract_time = float(row["Retract Time (s)"])
+                detected_during_retract = row.get("Detected During Retract", "")
+
+            except Exception as e:
+                skipped_rows += 1
+                writer.writerow([
+                    total_rows, "", "", "", "", "", "", "", "", "",
+                    "", f"Skipped: CSV parse error: {e}"
+                ])
+                continue
+
+            sequence_duration = eject_time + hold_time + retract_time
+
+            if skip_zero_duration and sequence_duration <= 0:
+                skipped_rows += 1
+                writer.writerow([
+                    total_rows,
+                    tag_id,
+                    tag_time_str,
+                    "",
+                    "",
+                    "",
+                    eject_time,
+                    hold_time,
+                    retract_time,
+                    detected_during_retract,
+                    "",
+                    "Skipped: zero duration"
+                ])
+                continue
+
+            raw_video_start = (tag_time - recording_start_time).total_seconds()
+
+            # If the event is very close to video start, only use available pre-padding.
+            actual_pre_pad = min(pre_pad_sec, max(0.0, raw_video_start))
+            video_start = max(0.0, raw_video_start - pre_pad_sec)
+            clip_duration = actual_pre_pad + sequence_duration + post_pad_sec
+
+            if clip_duration <= 0:
+                skipped_rows += 1
+                writer.writerow([
+                    total_rows,
+                    tag_id,
+                    tag_time_str,
+                    round(raw_video_start, 3),
+                    round(video_start, 3),
+                    round(clip_duration, 3),
+                    eject_time,
+                    hold_time,
+                    retract_time,
+                    detected_during_retract,
+                    "",
+                    "Skipped: invalid clip duration"
+                ])
+                continue
+
+            bee_folder = os.path.join(output_folder, f"bee_{tag_id}")
+            os.makedirs(bee_folder, exist_ok=True)
+
+            clip_name = f"bee_{tag_id}_feed_{total_rows:04d}.mp4"
+            output_path = os.path.join(bee_folder, clip_name)
+
+            if accurate_cut:
+                # More accurate timing, slower, re-encodes video.
+                command = [
+                    "ffmpeg", "-y",
+                    "-ss", f"{video_start:.3f}",
+                    "-i", video_file,
+                    "-t", f"{clip_duration:.3f}",
+                    "-c:v", "libx264",
+                    "-preset", "veryfast",
+                    "-crf", "18",
+                    "-c:a", "aac",
+                    output_path
+                ]
+            else:
+                # Fast, no re-encoding, but may cut near keyframes.
+                command = [
+                    "ffmpeg", "-y",
+                    "-ss", f"{video_start:.3f}",
+                    "-i", video_file,
+                    "-t", f"{clip_duration:.3f}",
+                    "-c", "copy",
+                    output_path
+                ]
+
+            try:
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+
+                if result.returncode == 0 and os.path.exists(output_path):
+                    saved_clips += 1
+                    status = "Saved"
+                    print(
+                        f"Saved {clip_name} | "
+                        f"start={video_start:.2f}s | "
+                        f"duration={clip_duration:.2f}s"
+                    )
+                else:
+                    skipped_rows += 1
+                    status = "ffmpeg failed"
+                    print(f"ERROR cutting {clip_name}")
+                    print(result.stderr[-500:])
+
+                writer.writerow([
+                    total_rows,
+                    tag_id,
+                    tag_time_str,
+                    round(raw_video_start, 3),
+                    round(video_start, 3),
+                    round(clip_duration, 3),
+                    eject_time,
+                    hold_time,
+                    retract_time,
+                    detected_during_retract,
+                    output_path,
+                    status
+                ])
+
+            except Exception as e:
+                skipped_rows += 1
+                writer.writerow([
+                    total_rows,
+                    tag_id,
+                    tag_time_str,
+                    round(raw_video_start, 3),
+                    round(video_start, 3),
+                    round(clip_duration, 3),
+                    eject_time,
+                    hold_time,
+                    retract_time,
+                    detected_during_retract,
+                    output_path,
+                    f"Exception: {e}"
+                ])
+
+    print("-" * 40)
+    print(f"Rows in CSV: {total_rows}")
+    print(f"Saved clips: {saved_clips}")
+    print(f"Skipped rows: {skipped_rows}")
+    print(f"Summary CSV: {summary_path}")
+
+def extract_possible_feeding_clips_from_csv(
+    possible_feeding_csv,
+    video_file,
+    output_folder="possible_feeding_clips",
+    recording_start_time=None,
+    log_file=None,
+    min_duration_sec=4.0,
+    pre_pad_sec=1.0,
+    post_pad_sec=1.0,
+    accurate_cut=False
+):
+    """
+    Extracts video clips for possible-feeding events from a CSV file.
+
+    CSV format expected:
+        Start Timestamp,
+        Min Intensity,
+        Max Intensity,
+        Avg Intensity,
+        Log Count,
+        Duration (s)
+
+    Selection rule:
+        Duration (s) > min_duration_sec
+
+    No drift assumption:
+        video_time = event_timestamp - recording_start_time
+
+    You must provide either:
+        1. recording_start_time="YYYY-MM-DD HH:MM:SS"
+    or:
+        2. log_file="your_log.txt", where the log contains a 'Recording started:' line.
+    """
+
+    os.makedirs(output_folder, exist_ok=True)
+
+    # -------------------------------------------------
+    # 1. Find recording/video zero time
+    # -------------------------------------------------
+    if recording_start_time is not None:
+        video_zero_time = datetime.strptime(
+            recording_start_time,
+            "%Y-%m-%d %H:%M:%S"
+        )
+        print(f"Using manual recording start time: {video_zero_time}")
+
+    elif log_file is not None:
+        video_zero_time = None
+
+        time_pattern = re.compile(r'^\[([\d\-\s:]+)\]')
+
+        with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                if "Recording started:" in line and ".mp4" in line:
+                    m = time_pattern.search(line)
+                    if m:
+                        video_zero_time = datetime.strptime(
+                            m.group(1),
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                        break
+
+        if video_zero_time is None:
+            print("ERROR: Could not find 'Recording started:' line in log.")
+            return
+
+        print(f"Recording start time found from log: {video_zero_time}")
+
+    else:
+        print("ERROR: Provide either recording_start_time or log_file.")
+        return
+
+    # -------------------------------------------------
+    # 2. Prepare summary CSV
+    # -------------------------------------------------
+    summary_path = os.path.join(output_folder, "possible_feeding_clip_summary.csv")
+
+    total_rows = 0
+    matched_rows = 0
+    saved_clips = 0
+    skipped_rows = 0
+
+    with open(possible_feeding_csv, "r", newline="", encoding="utf-8", errors="ignore") as infile, \
+         open(summary_path, "w", newline="", encoding="utf-8") as summary_file:
+
+        reader = csv.DictReader(infile)
+        writer = csv.writer(summary_file)
+
+        writer.writerow([
+            "CSV Row",
+            "Start Timestamp",
+            "Duration (s)",
+            "Avg Intensity",
+            "Video Start (s)",
+            "Clip Duration (s)",
+            "Output File",
+            "Status"
+        ])
+
         # -------------------------------------------------
-        # 2. Read CSV and cut clips
+        # 3. Process CSV rows
         # -------------------------------------------------
-        os.makedirs(output_folder, exist_ok=True)
+        for row in reader:
+            total_rows += 1
 
-        summary_path = os.path.join(output_folder, "clip_extraction_summary.csv")
+            try:
+                start_time_str = row["Start Timestamp"]
+                event_start_time = datetime.strptime(
+                    start_time_str,
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
-        total_rows = 0
-        saved_clips = 0
-        skipped_rows = 0
+                duration_sec = float(row["Duration (s)"])
+                avg_intensity = row.get("Avg Intensity", "")
 
-        with open(sequence_csv, "r", newline="", encoding="utf-8", errors="ignore") as infile, \
-            open(summary_path, "w", newline="", encoding="utf-8") as summary_file:
+            except Exception as e:
+                skipped_rows += 1
+                writer.writerow([
+                    total_rows,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    f"Skipped: CSV parse error: {e}"
+                ])
+                continue
 
-            reader = csv.DictReader(infile)
-            writer = csv.writer(summary_file)
+            # Important: strictly greater than 4 seconds
+            if duration_sec <= min_duration_sec:
+                continue
+
+            matched_rows += 1
+
+            raw_video_start = (event_start_time - video_zero_time).total_seconds()
+
+            # Handle events very close to the beginning of the video
+            actual_pre_pad = min(pre_pad_sec, max(0.0, raw_video_start))
+            video_start = max(0.0, raw_video_start - pre_pad_sec)
+
+            clip_duration = actual_pre_pad + duration_sec + post_pad_sec
+
+            if clip_duration <= 0:
+                skipped_rows += 1
+                writer.writerow([
+                    total_rows,
+                    start_time_str,
+                    duration_sec,
+                    avg_intensity,
+                    round(video_start, 3),
+                    round(clip_duration, 3),
+                    "",
+                    "Skipped: invalid clip duration"
+                ])
+                continue
+
+            clip_name = (
+                f"possible_feed_{matched_rows:04d}_"
+                f"{event_start_time.strftime('%H%M%S')}_"
+                f"{duration_sec:.1f}s.mp4"
+            )
+
+            output_path = os.path.join(output_folder, clip_name)
+
+            # -------------------------------------------------
+            # 4. Cut clip with ffmpeg
+            # -------------------------------------------------
+            if accurate_cut:
+                # More accurate, slower, re-encodes
+                command = [
+                    "ffmpeg", "-y",
+                    "-ss", f"{video_start:.3f}",
+                    "-i", video_file,
+                    "-t", f"{clip_duration:.3f}",
+                    "-c:v", "libx264",
+                    "-preset", "veryfast",
+                    "-crf", "18",
+                    "-c:a", "aac",
+                    output_path
+                ]
+            else:
+                # Faster, no re-encoding, may cut near keyframes
+                command = [
+                    "ffmpeg", "-y",
+                    "-ss", f"{video_start:.3f}",
+                    "-i", video_file,
+                    "-t", f"{clip_duration:.3f}",
+                    "-c", "copy",
+                    output_path
+                ]
+
+            result = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+
+            if result.returncode == 0 and os.path.exists(output_path):
+                saved_clips += 1
+                status = "Saved"
+
+                print(
+                    f"Saved {clip_name} | "
+                    f"start={video_start:.2f}s | "
+                    f"duration={clip_duration:.2f}s"
+                )
+
+            else:
+                skipped_rows += 1
+                status = "ffmpeg failed"
+                print(f"ERROR cutting {clip_name}")
+                print(result.stderr[-500:])
 
             writer.writerow([
-                "Clip Index",
-                "Tag ID",
-                "Tag Time",
-                "Video Start (s)",
-                "Clip Duration (s)",
-                "Eject Time (s)",
-                "Hold Time (s)",
-                "Retract Time (s)",
-                "Detected During Retract",
-                "Output File",
-                "Status"
+                total_rows,
+                start_time_str,
+                duration_sec,
+                avg_intensity,
+                round(video_start, 3),
+                round(clip_duration, 3),
+                output_path,
+                status
             ])
 
-            for row in reader:
-                total_rows += 1
+    print("-" * 40)
+    print(f"Total CSV rows: {total_rows}")
+    print(f"Rows with Duration > {min_duration_sec}: {matched_rows}")
+    print(f"Saved clips: {saved_clips}")
+    print(f"Skipped rows: {skipped_rows}")
+    print(f"Summary CSV: {summary_path}")
 
-                try:
-                    tag_id = row["Tag ID"]
-                    tag_time_str = row["Tag Time"]
+def assign_label_levels(event_positions, min_separation_sec=120):
+    """
+    Assigns each event to a vertical label level so nearby labels do not overlap.
 
-                    tag_time = datetime.strptime(
-                        tag_time_str,
-                        "%Y-%m-%d %H:%M:%S"
-                    )
+    Parameters
+    ----------
+    event_positions : list of float
+        Event x-positions in seconds.
 
-                    eject_time = float(row["Eject Time (s)"])
-                    hold_time = float(row["Hold Time (s)"])
-                    retract_time = float(row["Retract Time (s)"])
-                    detected_during_retract = row.get("Detected During Retract", "")
+    min_separation_sec : float
+        Minimum horizontal spacing required between labels on the same row.
 
-                except Exception as e:
-                    skipped_rows += 1
-                    writer.writerow([
-                        total_rows, "", "", "", "", "", "", "", "",
-                        "", f"Skipped: CSV parse error: {e}"
-                    ])
-                    continue
+    Returns
+    -------
+    levels : list of int
+        Row index for each event label.
+    """
+    levels = []
+    level_last_x = []
 
-                sequence_duration = eject_time + hold_time + retract_time
+    for x in event_positions:
+        placed = False
 
-                if skip_zero_duration and sequence_duration <= 0:
-                    skipped_rows += 1
-                    writer.writerow([
-                        total_rows,
-                        tag_id,
-                        tag_time_str,
-                        "",
-                        "",
-                        eject_time,
-                        hold_time,
-                        retract_time,
-                        detected_during_retract,
-                        "",
-                        "Skipped: zero duration"
-                    ])
-                    continue
+        for level_idx in range(len(level_last_x)):
+            if x - level_last_x[level_idx] >= min_separation_sec:
+                levels.append(level_idx)
+                level_last_x[level_idx] = x
+                placed = True
+                break
 
-                raw_video_start = (tag_time - recording_start_time).total_seconds()
+        if not placed:
+            levels.append(len(level_last_x))
+            level_last_x.append(x)
 
-                video_start = max(0.0, raw_video_start - pre_pad_sec)
-                clip_duration = sequence_duration + pre_pad_sec + post_pad_sec
+    return levels
 
-                if clip_duration <= 0:
-                    skipped_rows += 1
-                    writer.writerow([
-                        total_rows,
-                        tag_id,
-                        tag_time_str,
-                        video_start,
-                        clip_duration,
-                        eject_time,
-                        hold_time,
-                        retract_time,
-                        detected_during_retract,
-                        "",
-                        "Skipped: invalid clip duration"
-                    ])
-                    continue
+def plot_verified_feeding_times_from_folder_by_duration(
+    folder_path,
+    experiment_start_time_str,
+    experiment_duration_str,
+    output_plot_path=None,
+    extensions=(".mp4", ".avi", ".mov", ".mkv"),
+    title="Verified Feeding Events",
+    show_event_time_labels=True,
+):
+    """
+    Scans a folder of manually verified feeding clips, extracts feeding times
+    from filenames, converts them to elapsed experiment time, and plots them.
 
-                bee_folder = os.path.join(output_folder, f"bee_{tag_id}")
-                os.makedirs(bee_folder, exist_ok=True)
+    Expected filename style:
+        possible_feed_0001_121640_8.0s.mp4
 
-                clip_name = f"bee_{tag_id}_feed_{total_rows:04d}.mp4"
-                output_path = os.path.join(bee_folder, clip_name)
+    The 6-digit block is interpreted as HHMMSS:
+        121640 -> 12:16:40
 
-                if accurate_cut:
-                    # More accurate timing, slower, re-encodes video
-                    command = [
-                        "ffmpeg", "-y",
-                        "-ss", f"{video_start:.3f}",
-                        "-i", video_file,
-                        "-t", f"{clip_duration:.3f}",
-                        "-c:v", "libx264",
-                        "-preset", "veryfast",
-                        "-crf", "18",
-                        "-c:a", "aac",
-                        output_path
-                    ]
-                else:
-                    # Fast, no re-encoding, but may cut near keyframes
-                    command = [
-                        "ffmpeg", "-y",
-                        "-ss", f"{video_start:.3f}",
-                        "-i", video_file,
-                        "-t", f"{clip_duration:.3f}",
-                        "-c", "copy",
-                        output_path
-                    ]
+    X-axis:
+        Main x-axis shows elapsed experiment time.
+        Optional event labels show actual feeding clock times.
+    """
 
-                try:
-                    result = subprocess.run(
-                        command,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True
-                    )
+    if not os.path.isdir(folder_path):
+        print(f"ERROR: Folder not found: {folder_path}")
+        return []
 
-                    if result.returncode == 0 and os.path.exists(output_path):
-                        saved_clips += 1
-                        status = "Saved"
-                        print(
-                            f"Saved {clip_name} | "
-                            f"start={video_start:.2f}s | "
-                            f"duration={clip_duration:.2f}s"
-                        )
-                    else:
-                        skipped_rows += 1
-                        status = "ffmpeg failed"
-                        print(f"ERROR cutting {clip_name}")
-                        print(result.stderr[-500:])
+    # -------------------------------------------------
+    # 1. Parse experiment start and duration
+    # -------------------------------------------------
+    try:
+        experiment_start_dt = datetime.strptime(
+            experiment_start_time_str,
+            "%H:%M:%S"
+        )
+    except ValueError:
+        print("ERROR: experiment_start_time_str must be in HH:MM:SS format.")
+        return []
 
-                    writer.writerow([
-                        total_rows,
-                        tag_id,
-                        tag_time_str,
-                        round(video_start, 3),
-                        round(clip_duration, 3),
-                        eject_time,
-                        hold_time,
-                        retract_time,
-                        detected_during_retract,
-                        output_path,
-                        status
-                    ])
+    try:
+        h, m, s = map(int, experiment_duration_str.split(":"))
+        experiment_duration_sec = h * 3600 + m * 60 + s
+    except ValueError:
+        print("ERROR: experiment_duration_str must be in HH:MM:SS format.")
+        return []
 
-                except Exception as e:
-                    skipped_rows += 1
-                    writer.writerow([
-                        total_rows,
-                        tag_id,
-                        tag_time_str,
-                        round(video_start, 3),
-                        round(clip_duration, 3),
-                        eject_time,
-                        hold_time,
-                        retract_time,
-                        detected_during_retract,
-                        output_path,
-                        f"Exception: {e}"
-                    ])
+    if experiment_duration_sec <= 0:
+        print("ERROR: Experiment duration must be greater than zero.")
+        return []
 
-        print("-" * 40)
-        print(f"Rows in CSV: {total_rows}")
-        print(f"Saved clips: {saved_clips}")
-        print(f"Skipped rows: {skipped_rows}")
-        print(f"Summary CSV: {summary_path}")
+    # -------------------------------------------------
+    # 2. Collect video files
+    # -------------------------------------------------
+    files = [
+        f for f in os.listdir(folder_path)
+        if os.path.isfile(os.path.join(folder_path, f))
+        and f.lower().endswith(extensions)
+    ]
 
-input_log = 'feed_output_20260427_180716_1920x1080.txt'  # frame rate test log change!!
-vid_path = 'feed_output_20260427_180716_1920x1080.mp4'
+    if not files:
+        print("No video files found in folder.")
+        return []
+
+    # -------------------------------------------------
+    # 3. Extract HHMMSS time from filenames
+    # -------------------------------------------------
+    time_pattern = re.compile(r'(?<!\d)(\d{6})(?!\d)')
+
+    extracted_events = []
+    unmatched_files = []
+
+    for fname in sorted(files):
+        matches = time_pattern.findall(fname)
+
+        valid_times = []
+
+        for hhmmss in matches:
+            try:
+                clock_dt = datetime.strptime(hhmmss, "%H%M%S")
+                valid_times.append(clock_dt)
+            except ValueError:
+                pass
+
+        if not valid_times:
+            unmatched_files.append(fname)
+            continue
+
+        # Use the last valid HHMMSS block.
+        # This is safer for names like:
+        # possible_feed_0001_121640_8.0s.mp4
+        event_clock_dt = valid_times[-1]
+
+        # Handle midnight rollover.
+        if event_clock_dt < experiment_start_dt:
+            event_clock_dt = event_clock_dt + timedelta(days=1)
+
+        elapsed_sec = (event_clock_dt - experiment_start_dt).total_seconds()
+
+        extracted_events.append((fname, event_clock_dt, elapsed_sec))
+
+    if unmatched_files:
+        print("Warning: Could not extract valid HHMMSS time from these files:")
+        for f in unmatched_files:
+            print("  ", f)
+
+    if not extracted_events:
+        print("No valid feeding times extracted from filenames.")
+        return []
+
+    # -------------------------------------------------
+    # 4. Filter events within experiment duration
+    # -------------------------------------------------
+    filtered_events = [
+        event for event in extracted_events
+        if 0 <= event[2] <= experiment_duration_sec
+    ]
+
+    filtered_events.sort(key=lambda x: x[2])
+
+    if not filtered_events:
+        print("No extracted feeding events fall within the experiment duration.")
+        return []
+
+    # -------------------------------------------------
+    # 5. Prepare plot
+    # -------------------------------------------------
+    event_elapsed_seconds = [event[2] for event in filtered_events]
+    event_clock_labels = [event[1].strftime("%H:%M:%S") for event in filtered_events]
+
+    y_vals = [1] * len(event_elapsed_seconds)
+
+    fig, ax = plt.subplots(figsize=(16, 5))
+
+    ax.scatter(event_elapsed_seconds, y_vals, s=60)
+
+    for elapsed in event_elapsed_seconds:
+        ax.axvline(elapsed, ymin=0.15, ymax=0.85, linestyle="--", alpha=0.35)
+
+    ax.set_xlim(0, experiment_duration_sec)
+    ax.set_ylim(0.75, 1.25)
+    ax.set_yticks([1])
+    ax.set_yticklabels(["Feeding"])
+
+    ax.set_title(title, fontsize=14, fontweight="bold")
+    ax.set_xlabel("Elapsed experiment time")
+    ax.grid(axis="x", linestyle="--", alpha=0.4)
+
+    # -------------------------------------------------
+    # 6. Format main x-axis as elapsed HH:MM:SS
+    # -------------------------------------------------
+    def seconds_to_hms_for_axis(x, pos):
+        x = int(round(x))
+        hours = x // 3600
+        minutes = (x % 3600) // 60
+        seconds = x % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(seconds_to_hms_for_axis))
+
+    # -------------------------------------------------
+    # 7. Add feeding clock times on the x-axis
+    # -------------------------------------------------
+    if show_event_time_labels:
+            # You can tune this:
+            # if labels still collide, increase this number
+            min_label_spacing_sec = 120
+
+            label_levels = assign_label_levels(
+                event_elapsed_seconds,
+                min_separation_sec=min_label_spacing_sec
+            )
+
+            # Base y position for labels, below the main axis
+            base_y = 0.72
+            level_step = 0.08
+
+            # Extend lower margin depending on number of label rows
+            max_level = max(label_levels) if label_levels else 0
+            extra_bottom = 0.18 + max_level * 0.05
+            plt.subplots_adjust(bottom=min(0.45, extra_bottom))
+
+            for elapsed, clock_label, level in zip(
+                event_elapsed_seconds,
+                event_clock_labels,
+                label_levels
+            ):
+                label_y = base_y - level * level_step
+
+                # vertical guide line from point to label zone
+                ax.plot(
+                    [elapsed, elapsed],
+                    [1.0, label_y + 0.015],
+                    linestyle=":",
+                    alpha=0.4
+                )
+
+                # text label
+                ax.text(
+                    elapsed,
+                    label_y,
+                    clock_label,
+                    rotation=90,
+                    ha="center",
+                    va="top",
+                    fontsize=8
+                )
+
+    plt.tight_layout()
+
+    if output_plot_path is not None:
+        plt.savefig(output_plot_path, dpi=300, bbox_inches="tight")
+        print(f"Plot saved to: {output_plot_path}")
+
+    plt.show()
+
+    # -------------------------------------------------
+    # 8. Print summary
+    # -------------------------------------------------
+    print("-" * 40)
+    print(f"Video files found: {len(files)}")
+    print(f"Successfully parsed feeding times: {len(extracted_events)}")
+    print(f"Events within duration: {len(filtered_events)}")
+    print(f"Experiment start clock time: {experiment_start_time_str}")
+    print(f"Experiment duration: {experiment_duration_str}")
+    print("-" * 40)
+
+    for fname, clock_dt, elapsed_sec in filtered_events:
+        elapsed_str = seconds_to_hms_for_axis(elapsed_sec, None)
+        clock_str = clock_dt.strftime("%H:%M:%S")
+        print(f"{elapsed_str} | clock {clock_str} -> {fname}")
+
+    return filtered_events
+
+input_log = 'feed_output_20260504_115703_1920x1080.txt'  # frame rate test log change!!
+vid_path = 'feed_output_20260504_115703_1920x1080.mp4'
 output_csv = 'feed_sequence_durations.csv'
-output_csv_1 = 'possible_feeding.csv'
-total_length = "17:12:55"
-#calculate_total_log_time(input_log)
-#validate_aruco_tags(input_log, tags)
-#time_data_for_feeding(input_log, output_csv, tags)
-#feeding_trigger_vs_time(input_log, tags)
-#analyze_possible_feeding(input_log, output_csv_1)
-#plot_complete_bee_analysis(input_log, tags, "16:00:00")
+possible_feeding_csv = 'possible_feeding.csv'
 
-#generate_drift_samples(vid_path, total_length)
-extract_feed_sequence_clips_no_drift_from_csv(
-    sequence_csv= output_csv,
-    log_file=input_log,
-    video_file=vid_path,
-    output_folder="possible_feed_clips",
-    pre_pad_sec=0.5,
-    post_pad_sec=0.5,
-    accurate_cut=False,
-    skip_zero_duration=True
+plot_verified_feeding_times_from_folder_by_duration(
+    folder_path="possible_feeding_clips",
+    experiment_start_time_str="11:57:03",
+    experiment_duration_str="07:45:00",
+    output_plot_path="verified_feeding_timeline.png",
+    show_event_time_labels=True
 )

@@ -47,6 +47,17 @@ int F_TRIGGER = THRESHOLD_FRONT + HYSTERISIS_FRONT;
 
 bool bOn = false; bool mOn = false; bool fOn = false; 
 
+// --- SENSOR PATTERN CLASSIFICATION ---
+// Expected continuous filling order is Back -> Middle -> Front.
+// Normal patterns: 000, 100, 110, 111.
+// Other patterns are suspicious, but they only create warnings; they do not stop or change the state machine.
+byte lastSensorPattern = 255;
+
+byte getSensorPattern();
+const char* sensorPatternName(byte pattern);
+bool isSuspiciousSensorPattern(byte pattern);
+void checkSensorPatternChange();
+
 String serialBuffer = "";
 const int MAX_SERIAL_BUFFER = 20;
 bool isMotorEnabled = false;
@@ -177,8 +188,7 @@ void runStateMachine() {
 
     case RETRACTING:
       enableMotor();
-      //if (bOn && !mOn && !fOn) {
-      if (!bOn && !fOn) {  
+      if (bOn && !mOn && !fOn) {
         // Record new calibration distance
         numberOfSteps = abs(retractStartPos - stepper.currentPosition());
         if (wasSoftStop && numberOfSteps >= margin) {
@@ -240,6 +250,47 @@ void updateSensorVars() {
   } else if (fOn && rawF < THRESHOLD_FRONT) {
     fOn = false;
   }
+
+  checkSensorPatternChange();
+}
+
+byte getSensorPattern() {
+  return (bOn ? 4 : 0) | (mOn ? 2 : 0) | (fOn ? 1 : 0);
+}
+
+const char* sensorPatternName(byte pattern) {
+  switch (pattern) {
+    case 0: return "EMPTY";              // 000
+    case 4: return "WAITING_TARGET";     // 100
+    case 6: return "MIDDLE_REACHED";     // 110
+    case 7: return "FULL";               // 111
+    case 2: return "SUSPICIOUS_MIDDLE_ONLY";       // 010
+    case 1: return "SUSPICIOUS_FRONT_ONLY";        // 001
+    case 3: return "SUSPICIOUS_MIDDLE_FRONT";      // 011
+    case 5: return "SUSPICIOUS_BACK_FRONT_GAP";    // 101
+    default: return "UNKNOWN";
+  }
+}
+
+bool isSuspiciousSensorPattern(byte pattern) {
+  return !(pattern == 0 || pattern == 4 || pattern == 6 || pattern == 7);
+}
+
+void checkSensorPatternChange() {
+  byte pattern = getSensorPattern();
+  bool suspicious = isSuspiciousSensorPattern(pattern);
+
+  if (pattern != lastSensorPattern) {
+    //Serial.print("SENSOR PATTERN: ");
+    //Serial.println(sensorPatternName(pattern));
+
+    if (suspicious) {
+      //Serial.print("WARNING: Suspicious sensor pattern detected: ");
+      //Serial.println(sensorPatternName(pattern));
+    }
+
+    lastSensorPattern = pattern;
+  }
 }
 
 void checkLimitSwitches() {
@@ -291,6 +342,7 @@ void printStatus() {
   Serial.print("SENSORS: B="); Serial.print(bOn ? "ON " : "OFF "); Serial.print(analogRead(ELECTRODE_PIN_BACK));
   Serial.print(" M="); Serial.print(mOn ? "ON " : "OFF "); Serial.print(analogRead(ELECTRODE_PIN_MIDDLE));
   Serial.print(" F="); Serial.print(fOn ? "ON " : "OFF "); Serial.print(analogRead(ELECTRODE_PIN_FRONT));
+  Serial.print(" | Pattern: "); Serial.print(sensorPatternName(getSensorPattern()));
   Serial.print(" | State: ");
   const char* stateNames[] = {"IDLE", "WAITING", "EJECTING", "HOLDING", "RETRACTING"};
   Serial.println(stateNames[state]);
