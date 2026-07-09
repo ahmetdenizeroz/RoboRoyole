@@ -1,37 +1,37 @@
 from PySide6.QtCore import QThread, Signal
 
 
-class ArduinoReader(QThread):
+class HardwareSerialReader(QThread):
     message_received = Signal(str)
     error_received = Signal(str)
     disconnected = Signal(str)
 
-    def __init__(self, arduino_serial):
+    def __init__(self, hardware_serial):
         super().__init__()
-        self.arduino = arduino_serial
+        self.hardware = hardware_serial
         self.buffer = b""
         self.running = True
 
     def run(self):
-        reason = "ArduinoReader exited."
+        reason = "SerialReader exited."
 
         while self.running:
-            if not self.arduino or not self.arduino.is_open:
-                reason = "ArduinoReader stopped: serial port is closed."
+            if not self.hardware or not self.hardware.is_open:
+                reason = "SerialReader stopped: serial port is closed."
                 break
 
             try:
-                waiting = self.arduino.in_waiting
+                waiting = self.hardware.in_waiting
             except Exception as e:
-                reason = f"ArduinoReader in_waiting error: {repr(e)}"
+                reason = f"SerialReader in_waiting error: {repr(e)}"
                 self.error_received.emit(reason)
                 break
 
             if waiting > 0:
                 try:
-                    data = self.arduino.read(waiting)
+                    data = self.hardware.read(waiting)
                 except Exception as e:
-                    reason = f"ArduinoReader read error: {repr(e)}"
+                    reason = f"SerialReader read error: {repr(e)}"
                     self.error_received.emit(reason)
                     break
 
@@ -42,7 +42,7 @@ class ArduinoReader(QThread):
                 for line in lines[:-1]:
                     if line.strip():
                         msg = line.decode("ascii", errors="ignore").strip()
-                        self.message_received.emit(f"[Arduino]: {msg}")
+                        self.message_received.emit(f"[Hardware]: {msg}")
 
             self.msleep(50)
 

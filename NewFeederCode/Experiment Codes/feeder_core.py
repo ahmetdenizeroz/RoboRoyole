@@ -11,7 +11,7 @@ import psutil
 
 from workers.bee_detector import BeeDetector
 from workers.camera_init import CameraInitThread
-from workers.arduino_reader import ArduinoReader
+from workers.serial_reader import HardwareSerialReader
 from workers.video_recorder import VideoRecorder
 from workers.bee_drawer import BeeDrawer
 
@@ -129,7 +129,7 @@ class FeederController(QObject):
         self.frames_in_zone_counter = 0
         self.frames_out_of_zone_counter = 0
 
-        self.arduino_reader = None  # Thread for reading Arduino messages
+        self.serial_reader = None  # Thread for reading Hardware messages
         self.cam_init_worker = None
         
     # ===================================
@@ -245,11 +245,11 @@ class FeederController(QObject):
                 raise Exception("Serial port not open.")
 
             self.arduino.flushInput()
-            self.arduino_reader = ArduinoReader(self.arduino)
-            self.arduino_reader.message_received.connect(self.on_arduino_message)
-            self.arduino_reader.error_received.connect(self.on_arduino_reader_error)
-            self.arduino_reader.disconnected.connect(self.on_arduino_reader_disconnected)
-            self.arduino_reader.start()
+            self.serial_reader = HardwareSerialReader(self.arduino)
+            self.serial_reader.message_received.connect(self.on_arduino_message)
+            self.serial_reader.error_received.connect(self.on_arduino_reader_error)
+            self.serial_reader.disconnected.connect(self.on_arduino_reader_disconnected)
+            self.serial_reader.start()
             self._set_arduino_healthy(True)
             self.status_updated.emit("Arduino reader thread started.")
             self._log_to_file("Arduino reader thread started.")
@@ -283,9 +283,9 @@ class FeederController(QObject):
         # First detach shared objects under lock.
         with self.serial_lock:
             arduino = self.arduino
-            reader = self.arduino_reader
+            reader = self.serial_reader
             self.arduino = None
-            self.arduino_reader = None
+            self.serial_reader = None
 
         self._set_arduino_healthy(False)
         if manual:
