@@ -1031,8 +1031,8 @@ def plot_full_cycle_averages(file_path):
             sensor_data[s_idx].append(np.interp(x_common, full_x, full_y))
 
     # 4. Plotting
-    fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
-    colors = ['red', 'green', 'blue']
+    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True, dpi=300)
+    colors = ['black', 'black', 'black']
     labels = ['Back Electrode (B)', 'Middle Electrode (M)', 'Front Electrode (F)']
 
     for i in range(3):
@@ -1041,22 +1041,24 @@ def plot_full_cycle_averages(file_path):
         
         # Plot individual cycles faintly
         for run in all_runs:
-            axes[i].plot(x_common, run, color=colors[i], alpha=0.1)
+            axes[i].plot(x_common, run, color='gray', alpha=0.1)
         
         # Plot average
         axes[i].plot(x_common, avg_run, color=colors[i], linewidth=2.5, label='Average')
-        axes[i].set_ylabel("Raw Reading")
-        axes[i].set_title(labels[i])
+        axes[i].set_title(labels[i], pad=20 if i == 0 else 6)
         axes[i].grid(True, alpha=0.3)
 
         # Add Vertical Phase Markers
         for phase, (x_start, x_end) in PHASES.items():
             axes[i].axvline(x=x_start, color='black', linestyle='--', alpha=0.5)
             if i == 0: # Label phases on top plot only
-                axes[i].text(x_start + 0.01, axes[i].get_ylim()[1]*0.9, phase, fontsize=9)
+                x_center = (x_start + x_end) / 2
+                display_phase = {"RETRACTING": "RETRACT", "WAIT_POST": "WAIT"}.get(phase, phase)
+                axes[i].text(x_center, 1.02, display_phase, transform=axes[i].get_xaxis_transform(), fontsize=9, ha='center', va='bottom')
 
     axes[2].set_xlabel("Normalized Cycle Time (Sequence: Eject -> Hold -> Retract)")
-    plt.tight_layout()
+    fig.supylabel("Raw Reading")
+    plt.tight_layout(pad=4.0, h_pad=4.0, rect=[0, 0.08, 1, 0.92])
     plt.show()
 
 def dhms_to_seconds(dhms_str):
@@ -1245,8 +1247,8 @@ def extract_feed_sequence_clips_no_drift_from_csv(
     log_file,
     video_file,
     output_folder="feed_sequence_clips",
-    pre_pad_sec=2.0,
-    post_pad_sec=3.0,
+    pre_pad_sec=4.0,
+    post_pad_sec=4.0,
     accurate_cut=False,
     skip_zero_duration=True,
     recording_start_override=None
@@ -1495,14 +1497,12 @@ def extract_feed_sequence_clips_no_drift_from_csv(
     print(f"Skipped rows: {skipped_rows}")
     print(f"Summary CSV: {summary_path}")
 
-input_log = 'feed_output_20260504_115703_1920x1080.txt'  # frame rate test log change!!
+script_dir = os.path.dirname(os.path.abspath(__file__))
+#input_log = "NewFeederCode/Experiments/04052026SoloWorkerRoyalJelly/feed_output_20260504_115703_1920x1080.txt"
+input_log = "NewFeederCode/Experiments/27042026SoloWorkerRoyalJelly/feed_output_20260427_180716_1920x1080.txt"
 vid_path = ''
-output_csv = 'feed_sequence_durations.csv'
-possible_feeding_csv = 'possible_feeding.csv'
+output_csv = os.path.join(script_dir, 'feed_sequence_durations.csv')
+possible_feeding_csv = os.path.join(script_dir, 'possible_feeding.csv')
 total_length = "78:43:54"
 
-#validate_aruco_tags(input_log, tags)
-#calculate_total_log_time(input_log)
-#number_of_lines(input_log, tags)
-#time_data_for_feeding(input_log, output_csv, tags)
-analyze_possible_feeding(input_log, possible_feeding_csv)
+plot_full_cycle_averages(input_log)
