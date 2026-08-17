@@ -129,33 +129,33 @@ class MainWindow(QMainWindow):
 #############################################################################
 #                           Electrode Settings Group                        #
 #############################################################################
-        electrode_group = QGroupBox("Electrode Settings (Analog 0-1023)")   #
+        electrode_group = QGroupBox("Electrode Settings (Analog 0-4095)")   #
         electrode_layout = QGridLayout()                                    #
         electrode_layout.setColumnStretch(0, 1)
         electrode_layout.setColumnStretch(1, 1) 
                                                                             #
         self.spin_thresh1 = QSpinBox()                                      #
-        self.spin_thresh1.setRange(0, 1023)                                 #
+        self.spin_thresh1.setRange(0, 4095)                                 #
         self.spin_thresh1.setValue(600)                                     #
                                                                             #
         self.spin_hysterisis1 = QSpinBox()                                  #
-        self.spin_hysterisis1.setRange(0, 1023)                             #
+        self.spin_hysterisis1.setRange(0, 4095)                             #
         self.spin_hysterisis1.setValue(60)                                 #
                                                                             #
         self.spin_thresh2 = QSpinBox()                                      #
-        self.spin_thresh2.setRange(0, 1023)                                 #
+        self.spin_thresh2.setRange(0, 4095)                                 #
         self.spin_thresh2.setValue(580)                                     #
                                                                             #
         self.spin_hysterisis2 = QSpinBox()                                  #
-        self.spin_hysterisis2.setRange(0, 1023)                             #
+        self.spin_hysterisis2.setRange(0, 4095)                             #
         self.spin_hysterisis2.setValue(60)                                 #
                                                                             #
         self.spin_thresh3 = QSpinBox()                                      #
-        self.spin_thresh3.setRange(0, 1023)                                 #
+        self.spin_thresh3.setRange(0, 4095)                                 #
         self.spin_thresh3.setValue(530)                                     #
                                                                             #
         self.spin_hysterisis3 = QSpinBox()                                  #
-        self.spin_hysterisis3.setRange(0, 1023)                             #
+        self.spin_hysterisis3.setRange(0, 4095)                             #
         self.spin_hysterisis3.setValue(60)  
         
         self.spin_margin = QSpinBox()                                       #
