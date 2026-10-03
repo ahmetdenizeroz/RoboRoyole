@@ -20,7 +20,7 @@ F_THRESHOLD = 300
 TIME_PATTERN = re.compile(r'^\[([\d\-\s:]+)\]')
 F_VALUE_PATTERN = re.compile(r'F=(?:ON|OFF)\s+(\d+)')
 SENSOR_LINE_PATTERN = re.compile(
-    r"SENSORS:\s*"
+    r"(?:\[Hardware\]:\s*)?SENSORS:\s*"
     r"B=(?:ON|OFF)\s+(\d+)\s+"
     r"M=(?:ON|OFF)\s+(\d+)\s+"
     r"F=(?:ON|OFF)\s+(\d+)"
@@ -216,6 +216,8 @@ class AnalyzerCore(QObject):
         total_lines = 0
         tag_counts = {str(tag): 0 for tag in target_tags}
         state_counts = {'IDLE': 0, 'HOLDING': 0, 'WAITING': 0, 'EJECTING': 0, 'RETRACTING': 0}
+        auto_feed_count = 0
+        motion_feed_count = 0
         
         if not os.path.exists(file_path):
             self.log(f"Error: {file_path} not found.")
@@ -226,11 +228,16 @@ class AnalyzerCore(QObject):
                 total_lines += 1
                 clean_line = line.strip()
                 
-                if "confirmed. Sending FEED command." in clean_line:
+                if "Tag None confirmed. Sending FEED command." in clean_line:
+                    motion_feed_count += 1
+                elif "confirmed. Sending FEED command." in clean_line:
                     for tag in tag_counts.keys():
                         if f"Tag {tag} confirmed" in clean_line:
                             tag_counts[tag] += 1
                             break
+                            
+                if "AUTO FEED: Triggered" in clean_line:
+                    auto_feed_count += 1
                     
                 state_match = STATE_PATTERN.search(clean_line)
                 if state_match:
@@ -244,6 +251,8 @@ class AnalyzerCore(QObject):
         self.log("Feed Commands per Bee:")
         for tag, count in tag_counts.items():
             self.log(f"  Bee {tag}: {count} feeds")
+        self.log(f"  Auto Feeds: {auto_feed_count}")
+        self.log(f"  Motion Detection Feeds: {motion_feed_count}")
         
         self.log("-" * 30)
         self.log("System State Totals:")
@@ -336,12 +345,21 @@ class AnalyzerCore(QObject):
                 try: current_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
                 except ValueError: continue
 
-                if "confirmed. Sending FEED command." in clean_line:
+                is_motion_feed = "Tag None confirmed. Sending FEED command." in clean_line
+                is_tag_feed = "confirmed. Sending FEED command." in clean_line and not is_motion_feed
+                is_auto_feed = "AUTO FEED: Triggered" in clean_line
+
+                if is_tag_feed or is_auto_feed or is_motion_feed:
                     detected_tag = None
-                    for t in target_tags:
-                        if f"Tag {t} confirmed" in clean_line:
-                            detected_tag = t
-                            break
+                    if is_motion_feed:
+                        detected_tag = "motion detection feeding"
+                    elif is_tag_feed:
+                        for t in target_tags:
+                            if f"Tag {t} confirmed" in clean_line:
+                                detected_tag = t
+                                break
+                    elif is_auto_feed:
+                        detected_tag = "autofeed"
                     
                     if detected_tag and current_phase in ["IDLE", "RETRACTING"]:
                         if current_phase == "RETRACTING":
@@ -493,6 +511,187 @@ class AnalyzerCore(QObject):
         fig.write_html(output_name)
         self.log(f"Interactive graph saved to: {output_name}")
 
+    def plot_scaled_feeding_cycles(self, file_path, target_tags):
+        if not os.path.exists(file_path):
+            self.log(f"Error: {file_path} not found.")
+            return
+
+        self.log("Parsing log for sensor readings and feeding cycles...")
+        
+        sensor_data = [] # (time, b, m, f)
+        sequences = [] # (t_eject, t_hold, t_retract, t_end)
+        
+        target_tags = [str(t) for t in target_tags]
+        in_sequence = False
+        current_phase = "IDLE"
+        
+        eject_start = hold_start = retract_start = retract_end = None
+        
+        # We need to compile the regex if not globally available, but SENSOR_LINE_PATTERN is.
+        time_pat = TIME_PATTERN
+        sensor_pat = SENSOR_LINE_PATTERN
+        
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for line in f:
+                clean_line = line.strip()
+                if not clean_line.startswith('['): continue
+                time_str = clean_line[1:20]
+                try: current_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+                except ValueError: continue
+                
+                # Check for sensors
+                s_match = sensor_pat.search(clean_line)
+                if s_match:
+                    try:
+                        b_val = int(s_match.group(1))
+                        m_val = int(s_match.group(2))
+                        f_val = int(s_match.group(3))
+                        sensor_data.append((current_time, b_val, m_val, f_val))
+                    except: pass
+                
+                # Check for feeding cycle
+                is_motion_feed = "Tag None confirmed. Sending FEED command." in clean_line
+                is_tag_feed = "confirmed. Sending FEED command." in clean_line and not is_motion_feed
+                is_auto_feed = "AUTO FEED: Triggered" in clean_line
+                
+                if is_tag_feed or is_auto_feed or is_motion_feed:
+                    detected_tag = None
+                    if is_motion_feed:
+                        detected_tag = "motion detection feeding"
+                    elif is_tag_feed:
+                        for t in target_tags:
+                            if f"Tag {t} confirmed" in clean_line:
+                                detected_tag = t
+                                break
+                    elif is_auto_feed:
+                        detected_tag = "autofeed"
+                        
+                    if detected_tag and current_phase in ["IDLE", "RETRACTING"]:
+                        if current_phase == "RETRACTING":
+                            # Sequence ended early by another trigger, save previous one
+                            if eject_start and hold_start and retract_start:
+                                sequences.append((eject_start, hold_start, retract_start, current_time))
+                        
+                        in_sequence = True
+                        eject_start = current_time
+                        eject_end = hold_start = hold_end = retract_start = retract_end = None
+                        current_phase = "EJECTING"
+                    continue
+                
+                if "Starting HOLD" in clean_line and in_sequence:
+                    hold_start = current_time
+                    current_phase = "HOLDING"
+                elif "Hold time over. Retracting." in clean_line and in_sequence:
+                    retract_start = current_time
+                    current_phase = "RETRACTING"
+                elif "Retract Complete" in clean_line and in_sequence:
+                    retract_end = current_time
+                    if eject_start and hold_start and retract_start and retract_end:
+                        sequences.append((eject_start, hold_start, retract_start, retract_end))
+                    in_sequence = False
+                    current_phase = "IDLE"
+        
+        self.log(f"Found {len(sequences)} complete feeding cycles. Extracting and scaling data...")
+        if not sequences:
+            self.log("No complete feeding cycles found to plot.")
+            return
+            
+        all_scaled_f = []
+        all_scaled_m = []
+        all_scaled_b = []
+        boundaries = []
+        
+        common_x = np.linspace(0, 1, 500)
+        
+        import bisect
+        sensor_times = [s[0] for s in sensor_data]
+        
+        for (t_eject, t_hold, t_retract, t_end) in sequences:
+            t_min = t_eject - timedelta(seconds=1)
+            t_max = t_end + timedelta(seconds=1)
+            duration = (t_max - t_min).total_seconds()
+            if duration <= 0: continue
+            
+            start_idx = bisect.bisect_left(sensor_times, t_min)
+            end_idx = bisect.bisect_right(sensor_times, t_max)
+            
+            seq_data = sensor_data[start_idx:end_idx]
+            if not seq_data: continue
+            
+            t_vals = [(s[0] - t_min).total_seconds() / duration for s in seq_data]
+            b_vals = [s[1] for s in seq_data]
+            m_vals = [s[2] for s in seq_data]
+            f_vals = [s[3] for s in seq_data]
+            
+            all_scaled_f.append(np.interp(common_x, t_vals, f_vals))
+            all_scaled_m.append(np.interp(common_x, t_vals, m_vals))
+            all_scaled_b.append(np.interp(common_x, t_vals, b_vals))
+            
+            b_eject = (t_eject - t_min).total_seconds() / duration
+            b_hold = (t_hold - t_min).total_seconds() / duration
+            b_retract = (t_retract - t_min).total_seconds() / duration
+            b_end = (t_end - t_min).total_seconds() / duration
+            boundaries.append((b_eject, b_hold, b_retract, b_end))
+            
+        if not all_scaled_f:
+            self.log("No sensor data matched the feeding cycles.")
+            return
+            
+        self.log("Plotting overlaid cycles...")
+        fig, (ax_f, ax_m, ax_b) = plt.subplots(3, 1, figsize=(19.2, 10.8), dpi=100, sharex=True)
+        
+        for i in range(len(all_scaled_f)):
+            ax_f.plot(common_x, all_scaled_f[i], color='gray', alpha=0.3, linewidth=1)
+            ax_m.plot(common_x, all_scaled_m[i], color='gray', alpha=0.3, linewidth=1)
+            ax_b.plot(common_x, all_scaled_b[i], color='gray', alpha=0.3, linewidth=1)
+            
+        mean_f = np.mean(all_scaled_f, axis=0)
+        mean_m = np.mean(all_scaled_m, axis=0)
+        mean_b = np.mean(all_scaled_b, axis=0)
+        
+        ax_f.plot(common_x, mean_f, color='black', linewidth=2, label='Average')
+        ax_m.plot(common_x, mean_m, color='black', linewidth=2, label='Average')
+        ax_b.plot(common_x, mean_b, color='black', linewidth=2, label='Average')
+        
+        avg_b_eject = np.mean([b[0] for b in boundaries])
+        avg_b_hold = np.mean([b[1] for b in boundaries])
+        avg_b_retract = np.mean([b[2] for b in boundaries])
+        avg_b_end = np.mean([b[3] for b in boundaries])
+        
+        for ax in [ax_f, ax_m, ax_b]:
+            for b_val in [avg_b_eject, avg_b_hold, avg_b_retract, avg_b_end]:
+                ax.axvline(b_val, color='red', linestyle='--', alpha=0.7)
+            ax.grid(True, alpha=0.3)
+            ax.legend(loc='upper right')
+            
+        ax_f.set_title("Front Sensor (F) - Scaled Cycle Time", fontsize=16)
+        ax_m.set_title("Middle Sensor (M) - Scaled Cycle Time", fontsize=16)
+        ax_b.set_title("Back Sensor (B) - Scaled Cycle Time", fontsize=16)
+        
+        ax_f.set_ylabel("Sensor Value")
+        ax_m.set_ylabel("Sensor Value")
+        ax_b.set_ylabel("Sensor Value")
+        
+        ax_b.set_xlabel("Scaled Cycle Time (0 to 1)", fontsize=14)
+        
+        # Add text labels at the bottom for the states
+        trans = ax_b.get_xaxis_transform()
+        y_pos = -0.15 # Below the x-axis
+        
+        ax_b.text((0 + avg_b_eject)/2, y_pos, "WAITING\n(Before)", transform=trans, ha='center', va='top', fontsize=12)
+        ax_b.text((avg_b_eject + avg_b_hold)/2, y_pos, "EJECTING", transform=trans, ha='center', va='top', fontsize=12, fontweight='bold')
+        ax_b.text((avg_b_hold + avg_b_retract)/2, y_pos, "HOLDING", transform=trans, ha='center', va='top', fontsize=12, fontweight='bold')
+        ax_b.text((avg_b_retract + avg_b_end)/2, y_pos, "RETRACTING", transform=trans, ha='center', va='top', fontsize=12, fontweight='bold')
+        ax_b.text((avg_b_end + 1.0)/2, y_pos, "WAITING\n(After)", transform=trans, ha='center', va='top', fontsize=12)
+        
+        plt.subplots_adjust(hspace=0.3, bottom=0.15)
+        
+        output_file = file_path.replace(".txt", "_scaled_cycles.png")
+        plt.savefig(output_file, bbox_inches='tight')
+        plt.close(fig)
+        
+        self.log(f"Successfully plotted {len(sequences)} scaled cycles and saved to {output_file}")
+
     # Add remaining logic for drift & video extraction
     # Simplified here to keep file size manageable, but can easily import or implement.
     def analyze_baselines(self, file_path):
@@ -532,87 +731,15 @@ class AnalyzerCore(QObject):
                     self.log(f"  Sensor {sensor}: No data found.")
         self.log("\n" + "=" * 50)
 
-    def extract_feed_sequence_clips(self, sequence_csv, log_file, video_file, output_folder="feed_sequence_clips", pre_pad_sec=2.0, post_pad_sec=3.0):
-        if not os.path.exists(log_file) or not os.path.exists(video_file) or not os.path.exists(sequence_csv):
-            self.log("Error: One or more input files not found for video extraction.")
-            return
 
-        os.makedirs(output_folder, exist_ok=True)
-        recording_start_time = None
-        with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                if "Recording started:" in line and ".mp4" in line:
-                    m = TIME_PATTERN.search(line)
-                    if m:
-                        recording_start_time = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")
-                        break
-        
-        if not recording_start_time:
-            self.log("ERROR: Could not find 'Recording started:' line in log.")
-            return
 
-        self.log(f"Recording start time: {recording_start_time}")
-        total_rows = saved_clips = skipped_rows = 0
-        summary_path = os.path.join(output_folder, "clip_extraction_summary.csv")
-
-        with open(sequence_csv, "r", newline="", encoding="utf-8", errors="ignore") as infile, \
-             open(summary_path, "w", newline="", encoding="utf-8") as summary_file:
-            reader = csv.DictReader(infile)
-            writer = csv.writer(summary_file)
-            writer.writerow(["Clip Index", "Tag ID", "Tag Time", "Video Start (s)", "Clip Duration (s)", "Status"])
-
-            for row in reader:
-                total_rows += 1
-                try:
-                    tag_id = row["Tag ID"]
-                    tag_time_str = row["Tag Time"]
-                    tag_time = datetime.strptime(tag_time_str, "%Y-%m-%d %H:%M:%S")
-                    sequence_duration = float(row["Eject Time (s)"]) + float(row["Hold Time (s)"]) + float(row["Retract Time (s)"])
-                except Exception as e:
-                    skipped_rows += 1
-                    self.log(f"Skipping row {total_rows} due to parse error: {e}")
-                    continue
-
-                if sequence_duration <= 0:
-                    skipped_rows += 1
-                    continue
-
-                raw_video_start = (tag_time - recording_start_time).total_seconds()
-                actual_pre_pad = min(pre_pad_sec, max(0.0, raw_video_start))
-                video_start = max(0.0, raw_video_start - pre_pad_sec)
-                clip_duration = actual_pre_pad + sequence_duration + post_pad_sec
-
-                if clip_duration <= 0:
-                    skipped_rows += 1
-                    continue
-
-                bee_folder = os.path.join(output_folder, f"bee_{tag_id}")
-                os.makedirs(bee_folder, exist_ok=True)
-                clip_name = f"bee_{tag_id}_feed_{total_rows:04d}.mp4"
-                output_path = os.path.join(bee_folder, clip_name)
-
-                command = ["ffmpeg", "-y", "-ss", f"{video_start:.3f}", "-i", video_file, "-t", f"{clip_duration:.3f}", "-c", "copy", output_path]
-                try:
-                    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    if result.returncode == 0 and os.path.exists(output_path):
-                        saved_clips += 1
-                        self.log(f"Saved {clip_name} | start={video_start:.2f}s | duration={clip_duration:.2f}s")
-                        writer.writerow([total_rows, tag_id, tag_time_str, round(video_start, 3), round(clip_duration, 3), "Saved"])
-                    else:
-                        skipped_rows += 1
-                        self.log(f"ERROR cutting {clip_name}")
-                except Exception as e:
-                    skipped_rows += 1
-                    self.log(f"Exception extracting {clip_name}: {e}")
-
-        self.log(f"Done! Saved {saved_clips} clips. Skipped {skipped_rows} rows.")
-
-    def analyze_possible_feeding(self, file_path, output_csv, min_duration=0.0, max_duration=float('inf'), min_avg_intensity=0.0):
+    def analyze_possible_feeding(self, file_path, output_csv, min_duration=0.0, max_duration=float('inf'), min_avg_intensity=0.0, merge_gap=8.0):
         target_phrase = "Possible feeding detected at secondary zone:"
         
         current_chain_times = []
         current_chain_values = []
         last_processed_time = None
+        last_valid_end_dt = None
         chain_data_for_csv = []
         
         if not os.path.exists(file_path):
@@ -633,7 +760,7 @@ class AnalyzerCore(QObject):
                         val_str = clean_line.split(":")[-1].strip()
                         val = float(val_str)
                         
-                        if last_processed_time and (current_time - last_processed_time).total_seconds() <= 1.0:
+                        if last_processed_time and (current_time - last_processed_time).total_seconds() <= max(1.0, merge_gap):
                             current_chain_times.append(current_time)
                             current_chain_values.append(val)
                         else:
@@ -647,9 +774,15 @@ class AnalyzerCore(QObject):
                                     avg = sum(current_chain_values) / len(current_chain_values)
                                     
                                     if avg >= min_avg_intensity:
+                                        time_since_last = ""
+                                        if last_valid_end_dt:
+                                            time_since_last = round((start_dt - last_valid_end_dt).total_seconds(), 2)
+                                        last_valid_end_dt = end_dt
+                                        
                                         chain_data_for_csv.append([
                                             start_dt.strftime("%Y-%m-%d %H:%M:%S"), 
-                                            mn, mx, round(avg, 2), len(current_chain_values), duration
+                                            end_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                                            mn, mx, round(avg, 2), len(current_chain_values), duration, time_since_last
                                         ])
 
                             current_chain_times = [current_time]
@@ -668,14 +801,20 @@ class AnalyzerCore(QObject):
                 avg = sum(current_chain_values) / len(current_chain_values)
                 
                 if avg >= min_avg_intensity:
+                    time_since_last = ""
+                    if last_valid_end_dt:
+                        time_since_last = round((start_dt - last_valid_end_dt).total_seconds(), 2)
+                    last_valid_end_dt = end_dt
+                    
                     chain_data_for_csv.append([
                         start_dt.strftime("%Y-%m-%d %H:%M:%S"), 
-                        mn, mx, round(avg, 2), len(current_chain_values), duration
+                        end_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                        mn, mx, round(avg, 2), len(current_chain_values), duration, time_since_last
                     ])
 
         with open(output_csv, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(['Start Timestamp', 'Min Intensity', 'Max Intensity', 'Avg Intensity', 'Log Count', 'Duration (s)'])
+            writer.writerow(['Start Timestamp', 'End Timestamp', 'Min Intensity', 'Max Intensity', 'Avg Intensity', 'Log Count', 'Duration (s)', 'Time Since Last (s)'])
             writer.writerows(chain_data_for_csv)
 
         self.log(f"Analysis complete. Found {len(chain_data_for_csv)} distinct feeding chains saved to {output_csv}.")
@@ -753,3 +892,332 @@ class AnalyzerCore(QObject):
                     self.log(f"Exception extracting {clip_name}: {e}")
 
         self.log(f"Done! Saved {saved_clips} possible feeding clips. Skipped {skipped_rows} rows.")
+
+    def downsize_video(self, video_path, target_mb):
+        if not os.path.exists(video_path):
+            self.log(f"Error: Video file {video_path} not found.")
+            return
+
+        self.log(f"Starting downsize process for {os.path.basename(video_path)} to {target_mb} MB")
+        
+        # Get duration
+        try:
+            cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path]
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            duration = float(result.stdout.strip())
+            self.log(f"Video duration: {duration:.2f} seconds")
+        except Exception as e:
+            self.log(f"Error getting video duration: {e}")
+            return
+
+        # Calculate bitrates
+        # Target size in bits = MB * 1024 * 1024 * 8
+        target_total_bitrate = (target_mb * 1024 * 1024 * 8) / duration
+        
+        # Audio bitrate (assume 128k if there is room, else lower or 0)
+        audio_bitrate = 128000
+        if target_total_bitrate <= audio_bitrate:
+            audio_bitrate = 64000
+            
+        video_bitrate = target_total_bitrate - audio_bitrate
+        if video_bitrate <= 0:
+            self.log("Error: Target size is too small for this video duration.")
+            return
+
+        self.log(f"Target Video Bitrate: {int(video_bitrate/1000)}k, Audio: {int(audio_bitrate/1000)}k")
+
+        base_name = os.path.splitext(os.path.basename(video_path))[0]
+        output_file = os.path.join(os.path.dirname(video_path), f"{base_name}_downsized.mp4")
+
+        # 2-pass encoding
+        self.log("Starting Pass 1...")
+        # pass 1 does not need audio
+        pass1_cmd = ["ffmpeg", "-y", "-i", video_path, "-c:v", "libx264", "-b:v", str(int(video_bitrate)), "-pass", "1", "-an", "-f", "null", "NUL" if os.name == 'nt' else "/dev/null"]
+        
+        try:
+            subprocess.run(pass1_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        except subprocess.CalledProcessError as e:
+            self.log(f"Error in Pass 1: {e.stderr.decode('utf-8', errors='ignore')}")
+            return
+
+        self.log("Starting Pass 2...")
+        pass2_cmd = ["ffmpeg", "-y", "-i", video_path, "-c:v", "libx264", "-b:v", str(int(video_bitrate)), "-pass", "2", "-c:a", "aac", "-b:a", str(int(audio_bitrate)), output_file]
+        
+        try:
+            subprocess.run(pass2_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            self.log(f"Successfully downsized video to {output_file}")
+            # Verify file size
+            actual_size = os.path.getsize(output_file) / (1024 * 1024)
+            self.log(f"Actual size: {actual_size:.2f} MB")
+        except subprocess.CalledProcessError as e:
+            self.log(f"Error in Pass 2: {e.stderr.decode('utf-8', errors='ignore')}")
+            return
+
+    def plot_possible_feedings(self, csv_file):
+        if not os.path.exists(csv_file):
+            self.log(f"Error: {csv_file} not found.")
+            return
+
+        times = []
+        durations = []
+        
+        try:
+            with open(csv_file, 'r', newline='') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    times.append(datetime.strptime(row['Start Timestamp'], "%Y-%m-%d %H:%M:%S"))
+                    durations.append(float(row['Duration (s)']))
+        except Exception as e:
+            self.log(f"Error reading CSV: {e}")
+            return
+            
+        if not times:
+            self.log("No data found in CSV to plot.")
+            return
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=times,
+            y=durations,
+            mode='markers',
+            marker=dict(size=10, color='#f9c901', opacity=0.8, line=dict(width=1, color='white')),
+            name="Feeding Duration",
+            hovertemplate="Time: %{x}<br>Duration: %{y} s<extra></extra>"
+        ))
+
+        fig.update_layout(
+            title="Possible Feedings Duration over Time",
+            xaxis_title="Time of Day",
+            yaxis_title="Duration (Seconds)",
+            template="plotly_dark",
+            hovermode="closest",
+            plot_bgcolor='#111111',
+            paper_bgcolor='#111111',
+            font=dict(color='#FFF')
+        )
+        
+        base_name = os.path.splitext(os.path.basename(csv_file))[0].replace("_possible_feedings", "")
+        out_html = os.path.join(os.path.dirname(csv_file), f"{base_name}_possible_feedings_plot.html")
+        
+        try:
+            fig.write_html(out_html)
+            self.log(f"Successfully generated interactive scatter plot: {out_html}")
+        except Exception as e:
+            self.log(f"Error saving plot: {e}")
+
+    def plot_all_electrodes(self, file_path, time_limit_str=None):
+        if not os.path.exists(file_path):
+            self.log(f"Error: {file_path} not found.")
+            return
+
+        time_limit = None
+        if time_limit_str:
+            try:
+                h, m, s = map(int, time_limit_str.split(':'))
+                time_limit = timedelta(hours=h, minutes=m, seconds=s)
+            except Exception:
+                pass
+
+        times = []
+        b_vals = []
+        m_vals = []
+        f_vals = []
+        
+        start_time = None
+        time_pat = TIME_PATTERN
+        sensor_pat = SENSOR_LINE_PATTERN
+
+        self.log(f"Parsing {os.path.basename(file_path)} for electrode values...")
+        try:
+            with open(file_path, 'r', encoding="utf-8", errors="ignore") as f_in:
+                for line in f_in:
+                    t_match = time_pat.search(line)
+                    if not t_match: continue
+                    
+                    curr_time = datetime.strptime(t_match.group(1), "%Y-%m-%d %H:%M:%S")
+                    if start_time is None: start_time = curr_time
+                    if time_limit and (curr_time - start_time) > time_limit: break
+
+                    if "SENSORS:" in line:
+                        s_match = sensor_pat.search(line)
+                        if s_match:
+                            b_val = int(s_match.group(1))
+                            m_val = int(s_match.group(2))
+                            f_val = int(s_match.group(3))
+                            
+                            times.append(curr_time)
+                            b_vals.append(b_val)
+                            m_vals.append(m_val)
+                            f_vals.append(f_val)
+        except Exception as e:
+            self.log(f"Error parsing log file: {e}")
+            return
+            
+        if not times:
+            self.log("No electrode data found in log file.")
+            return
+
+        self.log("Generating plot...")
+        fig = make_subplots(
+            rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.05,
+            subplot_titles=("Back Electrode (B)", "Middle Electrode (M)", "Front Electrode (F)")
+        )
+
+        fig.add_trace(go.Scatter(x=times, y=b_vals, name='Back (B)', line=dict(color='#ff9900')), row=1, col=1)
+        fig.add_trace(go.Scatter(x=times, y=m_vals, name='Middle (M)', line=dict(color='#00ccff')), row=2, col=1)
+        fig.add_trace(go.Scatter(x=times, y=f_vals, name='Front (F)', line=dict(color='#ff3366')), row=3, col=1)
+
+        fig.update_layout(
+            title="Electrode Values over Time",
+            template="plotly_dark",
+            hovermode="x unified",
+            plot_bgcolor='#111111',
+            paper_bgcolor='#111111',
+            font=dict(color='#FFF'),
+            height=800
+        )
+        
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        out_html = os.path.join(os.path.dirname(file_path), f"{base_name}_electrodes_plot.html")
+        
+        try:
+            fig.write_html(out_html)
+            self.log(f"Successfully generated interactive electrode plot: {out_html}")
+        except Exception as e:
+            self.log(f"Error saving plot: {e}")
+
+    def plot_soft_stop(self, file_path, time_limit_str=None):
+        if not os.path.exists(file_path):
+            self.log(f"Error: {file_path} not found.")
+            return
+
+        time_limit = None
+        if time_limit_str:
+            try:
+                h, m, s = map(int, time_limit_str.split(':'))
+                time_limit = timedelta(hours=h, minutes=m, seconds=s)
+            except Exception:
+                pass
+
+        times = []
+        soft_stop_binary = []
+        
+        start_time = None
+        time_pat = TIME_PATTERN
+
+        self.log(f"Parsing {os.path.basename(file_path)} for Soft Stop triggers...")
+        try:
+            with open(file_path, 'r', encoding="utf-8", errors="ignore") as f_in:
+                for line in f_in:
+                    t_match = time_pat.search(line)
+                    if not t_match: continue
+                    
+                    curr_time = datetime.strptime(t_match.group(1), "%Y-%m-%d %H:%M:%S")
+                    if start_time is None: start_time = curr_time
+                    if time_limit and (curr_time - start_time) > time_limit: break
+
+                    is_soft_stop = "STATUS: Soft Stop (Distance). Starting HOLD." in line
+                    times.append(curr_time)
+                    soft_stop_binary.append(1 if is_soft_stop else 0)
+        except Exception as e:
+            self.log(f"Error parsing log file: {e}")
+            return
+            
+        if not times:
+            self.log("No timestamped data found in log file.")
+            return
+
+        self.log("Generating plot...")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=times, y=soft_stop_binary, name='Soft Stop', mode='lines', line_shape='hv', line=dict(color='crimson')))
+
+        fig.update_layout(
+            title="Soft Stop Triggers over Time",
+            xaxis_title="Time",
+            yaxis_title="Triggered (1) / Not Triggered (0)",
+            template="plotly_dark",
+            hovermode="x unified",
+            plot_bgcolor='#111111',
+            paper_bgcolor='#111111',
+            font=dict(color='#FFF')
+        )
+        
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        out_html = os.path.join(os.path.dirname(file_path), f"{base_name}_soft_stop_plot.html")
+        
+        try:
+            fig.write_html(out_html)
+            self.log(f"Successfully generated interactive soft stop plot: {out_html}")
+        except Exception as e:
+            self.log(f"Error saving plot: {e}")
+
+    def plot_steps_set(self, file_path, time_limit_str=None):
+        if not os.path.exists(file_path):
+            self.log(f"Error: {file_path} not found.")
+            return
+
+        time_limit = None
+        if time_limit_str:
+            try:
+                h, m, s = map(int, time_limit_str.split(':'))
+                time_limit = timedelta(hours=h, minutes=m, seconds=s)
+            except Exception:
+                pass
+
+        times = []
+        steps_values = []
+        
+        start_time = None
+        time_pat = TIME_PATTERN
+        steps_pat = re.compile(r'number_of_steps set:\s+(\d+)')
+        
+        current_steps_val = 0
+
+        self.log(f"Parsing {os.path.basename(file_path)} for number of steps set...")
+        try:
+            with open(file_path, 'r', encoding="utf-8", errors="ignore") as f_in:
+                for line in f_in:
+                    t_match = time_pat.search(line)
+                    if not t_match: continue
+                    
+                    curr_time = datetime.strptime(t_match.group(1), "%Y-%m-%d %H:%M:%S")
+                    if start_time is None: start_time = curr_time
+                    if time_limit and (curr_time - start_time) > time_limit: break
+
+                    s_match = steps_pat.search(line)
+                    if s_match:
+                        current_steps_val = int(s_match.group(1))
+
+                    times.append(curr_time)
+                    steps_values.append(current_steps_val)
+        except Exception as e:
+            self.log(f"Error parsing log file: {e}")
+            return
+            
+        if not times:
+            self.log("No timestamped data found in log file.")
+            return
+
+        self.log("Generating plot...")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=times, y=steps_values, name='Steps Set', mode='lines', line_shape='hv', line=dict(color='blue')))
+
+        fig.update_layout(
+            title="Number of Steps Set over Time",
+            xaxis_title="Time",
+            yaxis_title="Number of Steps",
+            template="plotly_dark",
+            hovermode="x unified",
+            plot_bgcolor='#111111',
+            paper_bgcolor='#111111',
+            font=dict(color='#FFF')
+        )
+        
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        out_html = os.path.join(os.path.dirname(file_path), f"{base_name}_steps_set_plot.html")
+        
+        try:
+            fig.write_html(out_html)
+            self.log(f"Successfully generated interactive steps plot: {out_html}")
+        except Exception as e:
+            self.log(f"Error saving plot: {e}")

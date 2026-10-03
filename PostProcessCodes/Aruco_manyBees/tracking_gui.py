@@ -11,8 +11,8 @@ from PySide6 import QtCore, QtGui, QtWidgets
 import matplotlib.pyplot as plt
 
 from tracking_core import TrackingEngine
-from background_builder import BackgroundBuilder
-from single_bee_detector_core import load_settings_txt
+from workers.background_builder_worker import BackgroundBuilder
+from bee_detector_core import load_settings_txt
 
 
 DEFAULT_BEE_DETECTOR_SETTINGS = {
@@ -666,7 +666,8 @@ class MainWindow(QtWidgets.QWidget):
         self.edit_bg_end_frame = QtWidgets.QLineEdit()
         self.chk_bg_grayscale = QtWidgets.QCheckBox("Build in grayscale")
         self.btn_build_bg = QtWidgets.QPushButton("Build BG")
-        self.btn_open_bg = QtWidgets.QPushButton("Open BG")
+        self.btn_open_bg = QtWidgets.QPushButton("View BG")
+        self.btn_import_bg = QtWidgets.QPushButton("Import Custom BG")
         self.btn_settings = QtWidgets.QPushButton("Reload Settings")
 
         self.btn_add_arena_circ = QtWidgets.QPushButton("Circle")
@@ -752,6 +753,7 @@ class MainWindow(QtWidgets.QWidget):
         bg_btn_row = QtWidgets.QHBoxLayout()
         bg_btn_row.addWidget(self.btn_build_bg)
         bg_btn_row.addWidget(self.btn_open_bg)
+        bg_btn_row.addWidget(self.btn_import_bg)
         bg_layout.addRow(bg_btn_row)
         setup_layout.addRow(bg_group)
         setup_layout.addRow(self.btn_settings)
@@ -831,6 +833,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.btn_build_bg.clicked.connect(self.build_background)
         self.btn_open_bg.clicked.connect(self.open_background)
+        self.btn_import_bg.clicked.connect(self.import_custom_bg)
         self.btn_settings.clicked.connect(self.open_settings_dialog)
 
         self.btn_add_arena_circ.clicked.connect(lambda: self.canvas.viewer.start_drawing("circle", "arena"))
@@ -885,6 +888,7 @@ class MainWindow(QtWidgets.QWidget):
             self.chk_bg_grayscale,
             self.btn_build_bg,
             self.btn_open_bg,
+            self.btn_import_bg,
             self.btn_settings,
             self.btn_add_arena_circ,
             self.btn_add_arena_rect,
@@ -921,8 +925,8 @@ class MainWindow(QtWidgets.QWidget):
         return work_dir / "background.png"
 
     def update_background_buttons(self):
-        bg_path = self.background_path()
-        self.btn_open_bg.setEnabled(bg_path is not None and bg_path.exists())
+        # We leave the button enabled so the user can click it and see the warning message if it doesn't exist.
+        pass
 
     def show_image_window(self, window_name: str, image):
         if image is None:
@@ -1074,7 +1078,7 @@ class MainWindow(QtWidgets.QWidget):
     def open_background(self):
         bg_path = self.background_path()
         if bg_path is None or not bg_path.exists():
-            QtWidgets.QMessageBox.warning(self.controls, "Warning", "No background.png found in the working directory.")
+            QtWidgets.QMessageBox.warning(self.controls, "Warning", "No background.png found in the working directory. Please build the background first using 'Build BG'.")
             return
         image = cv2.imread(str(bg_path), cv2.IMREAD_UNCHANGED)
         if image is None:
@@ -1082,10 +1086,34 @@ class MainWindow(QtWidgets.QWidget):
             return
         self.settings["background_path"] = str(bg_path)
         self.show_image_window("Background", image)
-        self.update_background_buttons()
+
+    def import_custom_bg(self):
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self.controls,
+            "Import Custom Background",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.tiff);;All Files (*)"
+        )
+        if not file_path:
+            return
+            
+        work_dir = self.work_directory()
+        if work_dir is None:
+            QtWidgets.QMessageBox.warning(self.controls, "Warning", "Please select an output directory or load a video first.")
+            return
+            
+        work_dir.mkdir(parents=True, exist_ok=True)
+        bg_dest_path = work_dir / "background.png"
+        
+        try:
+            shutil.copy2(file_path, bg_dest_path)
+            self.settings["background_path"] = str(bg_dest_path)
+            QtWidgets.QMessageBox.information(self.controls, "Success", f"Custom background imported as:\\n{bg_dest_path}")
+        except Exception as exc:
+            QtWidgets.QMessageBox.critical(self.controls, "Error", f"Could not import background:\\n{exc}")
 
     def open_settings_dialog(self):
-        # Detector parameters are now tuned in single_bee_detector_tuner_gui.py
+        # Detector parameters are now tuned in bee_detector_tuner_gui.py
         # and loaded here as a TXT/INI preset. This button reloads or selects the
         # preset instead of opening the old marker/follower settings dialog.
         current = self.edit_dict_path.text().strip()

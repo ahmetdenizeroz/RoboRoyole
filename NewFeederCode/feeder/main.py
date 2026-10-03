@@ -41,12 +41,14 @@ class SimpleStepper:
         
         self.current_pos = 0
         self.target_pos = 0
-        self.speed = 1000.0
-        self.max_speed = 1000.0
+        self.speed = 5000.0
+        self.max_speed = 5000.0
         self.accel = 500.0
         
         self.dir_cw = True
-        self.step_interval_us = 1000
+        self.dir_pin.value(0) # Physical pin 0 = Eject (CW)
+        self.max_step_interval_us = int(1000000 / self.max_speed) if self.max_speed > 0 else 0
+        self.step_interval_us = 0
         self.last_step_time = time.ticks_us()
         self.is_enabled = False
 
@@ -62,6 +64,7 @@ class SimpleStepper:
 
     def set_max_speed(self, val):
         self.max_speed = float(val)
+        self.max_step_interval_us = int(1000000 / self.max_speed) if self.max_speed > 0 else 0
 
     def set_acceleration(self, val):
         self.accel = float(val) # Left simple as it maintains non-blocking code density
@@ -70,11 +73,11 @@ class SimpleStepper:
         self.speed = speed
         if speed < 0:
             self.dir_cw = False
-            self.dir_pin.value(0)
+            self.dir_pin.value(1)
             speed = -speed
         else:
             self.dir_cw = True
-            self.dir_pin.value(1)
+            self.dir_pin.value(0)
             
         if speed > 0:
             self.step_interval_us = int(1000000 / speed)
@@ -86,6 +89,7 @@ class SimpleStepper:
 
     def stop(self):
         self.target_pos = self.current_pos
+        self.step_interval_us = 0
 
     def current_position(self):
         return self.current_pos
@@ -111,15 +115,15 @@ class SimpleStepper:
         if self.current_pos == self.target_pos:
             return False
             
+        self.step_interval_us = self.max_step_interval_us
+            
         # Determine direction
         if self.target_pos > self.current_pos and not self.dir_cw:
             self.dir_cw = True
-            self.dir_pin.value(1)
-            self.step_interval_us = int(1000000 / self.max_speed) if self.max_speed > 0 else 0
+            self.dir_pin.value(0)
         elif self.target_pos < self.current_pos and self.dir_cw:
             self.dir_cw = False
-            self.dir_pin.value(0)
-            self.step_interval_us = int(1000000 / self.max_speed) if self.max_speed > 0 else 0
+            self.dir_pin.value(1)
             
         return self.run_speed()
         
@@ -128,10 +132,10 @@ class SimpleStepper:
         self.target_pos = self.current_pos + rel_steps
         if rel_steps < 0:
             self.dir_cw = False
-            self.dir_pin.value(0)
+            self.dir_pin.value(1)
         else:
             self.dir_cw = True
-            self.dir_pin.value(1)
+            self.dir_pin.value(0)
             
         interval = int(1000000 / self.max_speed)
         steps_left = abs(rel_steps)
@@ -157,18 +161,18 @@ state = STATE_IDLE
 hold_start_time = 0
 hold_duration = 10000
 
-last_auto_feed_time = 0
-auto_feed_interval = 10000
-auto_feed_enabled = False
+last_auto_feed_time = time.ticks_ms()
+auto_feed_interval = 35000
+auto_feed_enabled = True
 
 # ------------------- THRESHOLDS (0-4095) -------------------
-THRESHOLD_BACK   = 2000
-THRESHOLD_MIDDLE = 1000
+THRESHOLD_BACK   = 1500
+THRESHOLD_MIDDLE = 900
 THRESHOLD_FRONT  = 800
 
 HYSTERISIS_BACK = 120
-HYSTERISIS_MIDDLE = 120
-HYSTERISIS_FRONT = 120
+HYSTERISIS_MIDDLE = 600
+HYSTERISIS_FRONT = 700
 
 B_TRIGGER = THRESHOLD_BACK + HYSTERISIS_BACK
 M_TRIGGER = THRESHOLD_MIDDLE + HYSTERISIS_MIDDLE
@@ -181,13 +185,21 @@ f_on = False
 # ------------------- DYNAMIC VARS -------------------
 number_of_steps = 0
 margin = 100
+enable_soft_stop = True
 eject_start_pos = 0
 retract_start_pos = 0
 last_wait_pos = 0
 was_soft_stop = False
 
+db_b_on, db_b_off = 0, 0
+db_m_on, db_m_off = 0, 0
+db_f_on, db_f_off = 0, 0
+DEBOUNCE_TARGET = 5
+
 last_sensor_pattern = 255
-last_print_time = 0
+last_print_time = time.ticks_ms()
+last_sensor_update_time = time.ticks_us()
+sensor_update_interval_us = 10000
 
 poller = select.poll()
 poller.register(sys.stdin, select.POLLIN)
@@ -199,7 +211,13 @@ def read_electrode(adc_pin):
     # The Pi Pico runs 3 pins through 1 internal ADC multiplexer. 
     # Reading pins sequentially with high impedance causes charge to "ghost" to the next pin.
     adc_pin.read_u16()  # Dummy read to switch multiplexer channel
-    time.sleep_us(100)  # Wait 100 microseconds for internal capacitor to fully drain to ground
+    
+    # Wait 100 microseconds for internal capacitor to fully drain to ground,
+    # but pump the stepper to maintain high speeds
+    start = time.ticks_us()
+    while time.ticks_diff(time.ticks_us(), start) < 100:
+        stepper.run_speed()
+        
     return adc_pin.read_u16() >> 4
 
 def get_sensor_pattern():
@@ -214,20 +232,50 @@ def sensor_pattern_name(pattern):
     return patterns.get(pattern, "UNKNOWN")
 
 def update_sensor_vars():
-    global b_on, m_on, f_on, last_sensor_pattern
+    global b_on, m_on, f_on, last_sensor_pattern, last_sensor_update_time, sensor_update_interval_us
+    global db_b_on, db_b_off, db_m_on, db_m_off, db_f_on, db_f_off
+    
+    now = time.ticks_us()
+    if 0 <= time.ticks_diff(now, last_sensor_update_time) < sensor_update_interval_us:
+        return
+    last_sensor_update_time = now
     
     rawB = read_electrode(adc_back)
     rawM = read_electrode(adc_middle)
     rawF = read_electrode(adc_front)
     
-    if not b_on and rawB > B_TRIGGER: b_on = True
-    elif b_on and rawB < THRESHOLD_BACK: b_on = False
+    if rawB > B_TRIGGER:
+        db_b_on += 1
+        db_b_off = 0
+        if db_b_on >= DEBOUNCE_TARGET: b_on = True
+    elif rawB < THRESHOLD_BACK:
+        db_b_off += 1
+        db_b_on = 0
+        if db_b_off >= DEBOUNCE_TARGET: b_on = False
+    else:
+        db_b_on, db_b_off = 0, 0
         
-    if not m_on and rawM > M_TRIGGER: m_on = True
-    elif m_on and rawM < THRESHOLD_MIDDLE: m_on = False
+    if rawM > M_TRIGGER:
+        db_m_on += 1
+        db_m_off = 0
+        if db_m_on >= DEBOUNCE_TARGET: m_on = True
+    elif rawM < THRESHOLD_MIDDLE:
+        db_m_off += 1
+        db_m_on = 0
+        if db_m_off >= DEBOUNCE_TARGET: m_on = False
+    else:
+        db_m_on, db_m_off = 0, 0
         
-    if not f_on and rawF > F_TRIGGER: f_on = True
-    elif f_on and rawF < THRESHOLD_FRONT: f_on = False
+    if rawF > F_TRIGGER:
+        db_f_on += 1
+        db_f_off = 0
+        if db_f_on >= DEBOUNCE_TARGET: f_on = True
+    elif rawF < THRESHOLD_FRONT:
+        db_f_off += 1
+        db_f_on = 0
+        if db_f_off >= DEBOUNCE_TARGET: f_on = False
+    else:
+        db_f_on, db_f_off = 0, 0
         
     pattern = get_sensor_pattern()
     if pattern != last_sensor_pattern:
@@ -261,14 +309,23 @@ def check_limit_switches():
 
 def process_command(cmd):
     global state, eject_start_pos, retract_start_pos, hold_duration, margin
-    global last_auto_feed_time, last_wait_pos, number_of_steps
+    global last_auto_feed_time, last_wait_pos, number_of_steps, enable_soft_stop
     global THRESHOLD_BACK, THRESHOLD_MIDDLE, THRESHOLD_FRONT
     global HYSTERISIS_BACK, HYSTERISIS_MIDDLE, HYSTERISIS_FRONT
     global B_TRIGGER, M_TRIGGER, F_TRIGGER
     
     if not cmd: return
     type_char = cmd[0].upper()
-    val = int(cmd[1:]) if len(cmd) > 1 else 0
+    try:
+        val = int(cmd[1:]) if len(cmd) > 1 else 0
+    except ValueError:
+        print("CMD REJECTED: Invalid value")
+        return
+
+    if type_char == 'E':
+        enable_soft_stop = (val > 0)
+        print("Soft Stop Enabled:", enable_soft_stop)
+        return
 
     if type_char == 'S':
         print("CMD: STOP")
@@ -349,9 +406,22 @@ def process_command(cmd):
         print("CMD: Reset Step Calibration")
 
 def read_serial_commands():
-    if poller.poll(0):
-        cmd = sys.stdin.readline().strip()
-        process_command(cmd)
+    global serial_buffer
+    while poller.poll(0):
+        try:
+            char = sys.stdin.read(1)
+            if not char:
+                break
+            if char == '\n' or char == '\r':
+                if serial_buffer:
+                    process_command(serial_buffer.strip())
+                    serial_buffer = ""
+            else:
+                serial_buffer += char
+                if len(serial_buffer) > 64:  # Prevent memory overflow from garbage data
+                    serial_buffer = ""
+        except Exception:
+            break
 
 def check_auto_feed():
     global state, eject_start_pos, last_auto_feed_time
@@ -384,12 +454,6 @@ def run_state_machine():
         stepper.disable_outputs()
         
     elif state == STATE_WAITING:
-        if number_of_steps > 0:
-            cur_pos = stepper.current_position()
-            if cur_pos != last_wait_pos:
-                number_of_steps -= (cur_pos - last_wait_pos)
-                last_wait_pos = cur_pos
-                
         if b_on and not m_on and not f_on:
             stepper.stop()
             stepper.disable_outputs()
@@ -405,8 +469,8 @@ def run_state_machine():
     elif state == STATE_EJECTING:
         stepper.enable_outputs()
         cur_travel = stepper.current_position() - eject_start_pos
-        dist_limit = (number_of_steps > 0 and cur_travel >= (number_of_steps + margin))
-        sensors_triggered = b_on and m_on and f_on
+        dist_limit = enable_soft_stop and (number_of_steps > 0 and cur_travel >= (number_of_steps + margin))
+        sensors_triggered = f_on
         
         if sensors_triggered or dist_limit:
             was_soft_stop = dist_limit and not sensors_triggered
@@ -419,8 +483,11 @@ def run_state_machine():
             hold_start_time = time.ticks_ms()
             stepper.stop()
         else:
-            stepper.move_to(2000000000)
-            stepper.run()
+            if m_on:
+                stepper.set_speed(stepper.max_speed / 2)
+            else:
+                stepper.set_speed(stepper.max_speed)
+            stepper.run_speed()
             
     elif state == STATE_HOLDING:
         if time.ticks_diff(time.ticks_ms(), hold_start_time) >= hold_duration:
@@ -439,10 +506,15 @@ def run_state_machine():
     elif state == STATE_RETRACTING:
         stepper.enable_outputs()
         if b_on and not m_on and not f_on:
-            number_of_steps = abs(retract_start_pos - stepper.current_position())
-            if was_soft_stop and number_of_steps >= margin:
-                number_of_steps -= margin
-            print("number_of_steps set:", number_of_steps)
+            new_steps = abs(retract_start_pos - stepper.current_position())
+            if new_steps > 0:
+                number_of_steps = new_steps
+                if was_soft_stop and number_of_steps >= margin:
+                    number_of_steps -= margin
+                print("number_of_steps set:", number_of_steps)
+            else:
+                print("STATUS: Tip already clear. Preserved number_of_steps:", number_of_steps)
+                
             print("STATUS: Retract Complete. Entering WAITING.")
             state = STATE_WAITING
             last_wait_pos = stepper.current_position()
@@ -459,5 +531,9 @@ while True:
     update_sensor_vars()
     check_auto_feed()
     run_state_machine()
-    # Tiny sleep to let the RP2040 process native background tasks natively
-    time.sleep_us(50)
+    
+    # Tiny sleep to let the RP2040 process native background tasks natively,
+    # while pumping the stepper to maintain high speeds
+    start = time.ticks_us()
+    while time.ticks_diff(time.ticks_us(), start) < 50:
+        stepper.run_speed()

@@ -427,9 +427,9 @@ class FeederController(QObject):
                 self.settings["threshold_1"] = int(settings.get("threshold_1", 512))
                 self.settings["threshold_2"] = int(settings.get("threshold_2", 512))
                 self.settings["threshold_3"] = int(settings.get("threshold_3", 512))
-                self.settings["hysterisis_1"] = int(settings.get("hysterisis_1", 512))
-                self.settings["hysterisis_2"] = int(settings.get("hysterisis_2", 512))
-                self.settings["hysterisis_3"] = int(settings.get("hysterisis_3", 512))
+                self.settings["hysterisis_1"] = int(settings.get("hysterisis_1", 60))
+                self.settings["hysterisis_2"] = int(settings.get("hysterisis_2", 60))
+                self.settings["hysterisis_3"] = int(settings.get("hysterisis_3", 60))
                 self.settings["margin"] = int(settings.get("margin", 50))
 
                 self.status_updated.emit(

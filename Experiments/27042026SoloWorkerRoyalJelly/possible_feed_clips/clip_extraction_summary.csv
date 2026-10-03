@@ -1,0 +1,278 @@
+Clip Index,Tag ID,Tag Time,Video Start (s),Clip Duration (s),Eject Time (s),Hold Time (s),Retract Time (s),Detected During Retract,Output File,Status
+1,0,2026-04-27 18:07:37,20.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0001.mp4,Saved
+2,0,2026-04-27 20:01:16,6839.5,13.0,2.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0002.mp4,Saved
+3,0,2026-04-27 20:14:55,7658.5,12.0,1.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0003.mp4,Saved
+4,0,2026-04-27 20:15:06,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+5,0,2026-04-27 20:16:00,7723.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0005.mp4,Saved
+6,0,2026-04-27 20:17:19,7802.5,14.0,0.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0006.mp4,Saved
+7,0,2026-04-27 20:17:36,7819.5,14.0,0.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0007.mp4,Saved
+8,0,2026-04-27 20:32:59,8742.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0008.mp4,Saved
+9,0,2026-04-27 20:38:46,9089.5,15.0,2.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0009.mp4,Saved
+10,0,2026-04-27 20:39:00,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+11,0,2026-04-27 20:39:38,9141.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0011.mp4,Saved
+12,0,2026-04-27 20:39:56,9159.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0012.mp4,Saved
+13,0,2026-04-27 20:40:36,9199.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0013.mp4,Saved
+14,0,2026-04-27 20:42:06,9289.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0014.mp4,Saved
+15,0,2026-04-27 21:01:55,10478.5,14.0,0.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0015.mp4,Saved
+16,0,2026-04-27 21:02:36,10519.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0016.mp4,Saved
+17,0,2026-04-27 21:02:53,10536.5,14.0,3.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0017.mp4,Saved
+18,0,2026-04-27 21:03:36,10579.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0018.mp4,Saved
+19,0,2026-04-27 21:04:58,10661.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0019.mp4,Saved
+20,0,2026-04-27 21:06:17,10740.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0020.mp4,Saved
+21,0,2026-04-27 21:06:38,10761.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0021.mp4,Saved
+22,0,2026-04-27 21:06:54,10777.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0022.mp4,Saved
+23,0,2026-04-27 21:07:28,10811.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0023.mp4,Saved
+24,0,2026-04-27 21:07:47,10830.5,14.0,0.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0024.mp4,Saved
+25,0,2026-04-27 21:08:05,10848.5,14.0,0.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0025.mp4,Saved
+26,0,2026-04-27 21:08:53,10896.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0026.mp4,Saved
+27,0,2026-04-27 21:09:39,10942.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0027.mp4,Saved
+28,0,2026-04-27 21:09:54,10957.5,17.0,3.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0028.mp4,Saved
+29,0,2026-04-27 21:10:17,10980.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0029.mp4,Saved
+30,0,2026-04-27 21:10:34,10997.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0030.mp4,Saved
+31,0,2026-04-27 21:10:50,11013.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0031.mp4,Saved
+32,0,2026-04-27 21:11:19,11042.5,13.0,1.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0032.mp4,Saved
+33,0,2026-04-27 21:11:31,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+34,0,2026-04-27 21:11:46,11069.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0034.mp4,Saved
+35,0,2026-04-27 21:13:25,11168.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0035.mp4,Saved
+36,0,2026-04-27 21:13:39,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+37,0,2026-04-27 21:14:21,11224.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0037.mp4,Saved
+38,0,2026-04-27 21:14:47,11250.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0038.mp4,Saved
+39,0,2026-04-27 21:15:17,11280.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0039.mp4,Saved
+40,0,2026-04-27 21:15:45,11308.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0040.mp4,Saved
+41,0,2026-04-27 21:16:09,11332.5,13.0,0.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0041.mp4,Saved
+42,0,2026-04-27 21:16:21,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+43,0,2026-04-27 21:16:49,11372.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0043.mp4,Saved
+44,0,2026-04-27 21:17:38,11421.5,14.0,1.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0044.mp4,Saved
+45,0,2026-04-27 21:17:51,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+46,0,2026-04-27 21:20:36,11599.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0046.mp4,Saved
+47,0,2026-04-27 21:21:01,11624.5,13.0,0.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0047.mp4,Saved
+48,0,2026-04-27 21:21:13,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+49,0,2026-04-27 21:21:22,11645.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0049.mp4,Saved
+50,0,2026-04-27 21:23:57,11800.5,13.0,1.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0050.mp4,Saved
+51,0,2026-04-27 21:24:09,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+52,0,2026-04-27 21:24:43,11846.5,12.0,1.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0052.mp4,Saved
+53,0,2026-04-27 21:24:54,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+54,0,2026-04-27 21:26:21,11944.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0054.mp4,Saved
+55,0,2026-04-27 21:27:25,12008.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0055.mp4,Saved
+56,0,2026-04-27 21:27:41,12024.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0056.mp4,Saved
+57,0,2026-04-27 21:28:09,12052.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0057.mp4,Saved
+58,0,2026-04-27 21:29:27,12130.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0058.mp4,Saved
+59,0,2026-04-27 21:30:00,12163.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0059.mp4,Saved
+60,0,2026-04-27 21:30:17,12180.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0060.mp4,Saved
+61,0,2026-04-27 21:30:35,12198.5,13.0,1.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0061.mp4,Saved
+62,0,2026-04-27 21:30:47,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+63,0,2026-04-27 21:30:51,12214.5,17.0,3.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0063.mp4,Saved
+64,0,2026-04-27 21:31:11,12234.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0064.mp4,Saved
+65,0,2026-04-27 21:31:27,12250.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0065.mp4,Saved
+66,0,2026-04-27 21:31:51,12274.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0066.mp4,Saved
+67,0,2026-04-27 21:32:36,12319.5,14.0,1.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0067.mp4,Saved
+68,0,2026-04-27 21:32:49,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+69,0,2026-04-27 21:32:52,12335.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0069.mp4,Saved
+70,0,2026-04-27 21:33:08,12351.5,16.0,3.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0070.mp4,Saved
+71,0,2026-04-27 21:33:23,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+72,0,2026-04-27 21:33:30,12373.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0072.mp4,Saved
+73,0,2026-04-27 21:33:49,12392.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0073.mp4,Saved
+74,0,2026-04-27 21:55:02,13665.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0074.mp4,Saved
+75,0,2026-04-27 21:55:32,13695.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0075.mp4,Saved
+76,0,2026-04-27 21:57:32,13815.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0076.mp4,Saved
+77,0,2026-04-27 22:01:00,14023.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0077.mp4,Saved
+78,0,2026-04-27 22:12:31,14714.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0078.mp4,Saved
+79,0,2026-04-27 22:34:17,16020.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0079.mp4,Saved
+80,0,2026-04-27 22:34:32,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+81,0,2026-04-27 22:38:02,16245.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0081.mp4,Saved
+82,0,2026-04-27 22:38:56,16299.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0082.mp4,Saved
+83,0,2026-04-27 22:49:47,16950.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0083.mp4,Saved
+84,0,2026-04-27 22:50:25,16988.5,13.0,1.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0084.mp4,Saved
+85,0,2026-04-27 22:50:37,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+86,0,2026-04-27 23:05:19,17882.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0086.mp4,Saved
+87,0,2026-04-27 23:11:48,18271.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0087.mp4,Saved
+88,0,2026-04-27 23:13:54,18397.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0088.mp4,Saved
+89,0,2026-04-27 23:14:44,18447.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0089.mp4,Saved
+90,0,2026-04-27 23:15:12,18475.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0090.mp4,Saved
+91,0,2026-04-27 23:16:41,18564.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0091.mp4,Saved
+92,0,2026-04-27 23:16:57,18580.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0092.mp4,Saved
+93,0,2026-04-27 23:18:40,18683.5,12.0,1.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0093.mp4,Saved
+94,0,2026-04-27 23:18:51,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+95,0,2026-04-27 23:19:05,18708.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0095.mp4,Saved
+96,0,2026-04-27 23:19:25,18728.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0096.mp4,Saved
+97,0,2026-04-27 23:20:14,18777.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0097.mp4,Saved
+98,0,2026-04-27 23:20:38,18801.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0098.mp4,Saved
+99,0,2026-04-27 23:21:26,18849.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0099.mp4,Saved
+100,0,2026-04-27 23:22:01,18884.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0100.mp4,Saved
+101,0,2026-04-27 23:22:25,18908.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0101.mp4,Saved
+102,0,2026-04-27 23:22:47,18930.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0102.mp4,Saved
+103,0,2026-04-27 23:24:54,19057.5,15.0,0.0,11.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0103.mp4,Saved
+104,0,2026-04-27 23:25:55,19118.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0104.mp4,Saved
+105,0,2026-04-27 23:28:56,19299.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0105.mp4,Saved
+106,0,2026-04-27 23:30:25,19388.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0106.mp4,Saved
+107,0,2026-04-27 23:30:54,19417.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0107.mp4,Saved
+108,0,2026-04-27 23:31:49,19472.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0108.mp4,Saved
+109,0,2026-04-27 23:32:07,19490.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0109.mp4,Saved
+110,0,2026-04-27 23:32:22,19505.5,18.0,3.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0110.mp4,Saved
+111,0,2026-04-27 23:32:51,19534.5,12.0,0.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0111.mp4,Saved
+112,0,2026-04-27 23:33:02,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+113,0,2026-04-27 23:33:13,19556.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0113.mp4,Saved
+114,0,2026-04-27 23:33:43,19586.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0114.mp4,Saved
+115,0,2026-04-27 23:35:09,19672.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0115.mp4,Saved
+116,0,2026-04-27 23:35:28,19691.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0116.mp4,Saved
+117,0,2026-04-27 23:36:12,19735.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0117.mp4,Saved
+118,0,2026-04-27 23:36:27,19750.5,18.0,4.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0118.mp4,Saved
+119,0,2026-04-27 23:36:52,19775.5,12.0,1.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0119.mp4,Saved
+120,0,2026-04-27 23:37:03,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+121,0,2026-04-27 23:37:13,19796.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0121.mp4,Saved
+122,0,2026-04-27 23:37:33,19816.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0122.mp4,Saved
+123,0,2026-04-27 23:37:48,19831.5,17.0,3.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0123.mp4,Saved
+124,0,2026-04-27 23:38:04,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+125,0,2026-04-27 23:38:19,19862.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0125.mp4,Saved
+126,0,2026-04-27 23:39:03,19906.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0126.mp4,Saved
+127,0,2026-04-27 23:39:40,19943.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0127.mp4,Saved
+128,0,2026-04-27 23:40:07,19970.5,13.0,1.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0128.mp4,Saved
+129,0,2026-04-27 23:40:19,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+130,0,2026-04-27 23:40:30,19993.5,13.0,1.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0130.mp4,Saved
+131,0,2026-04-27 23:40:42,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+132,0,2026-04-27 23:41:11,20034.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0132.mp4,Saved
+133,0,2026-04-27 23:48:39,20482.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0133.mp4,Saved
+134,0,2026-04-27 23:50:44,20607.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0134.mp4,Saved
+135,0,2026-04-27 23:51:23,20646.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0135.mp4,Saved
+136,0,2026-04-27 23:51:41,20664.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0136.mp4,Saved
+137,0,2026-04-27 23:51:58,20681.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0137.mp4,Saved
+138,0,2026-04-27 23:52:40,20723.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0138.mp4,Saved
+139,0,2026-04-27 23:53:03,20746.5,15.0,2.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0139.mp4,Saved
+140,0,2026-04-27 23:53:17,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+141,0,2026-04-27 23:54:16,20819.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0141.mp4,Saved
+142,0,2026-04-27 23:54:32,20835.5,18.0,3.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0142.mp4,Saved
+143,0,2026-04-27 23:55:04,20867.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0143.mp4,Saved
+144,0,2026-04-27 23:55:21,20884.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0144.mp4,Saved
+145,0,2026-04-27 23:55:45,20908.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0145.mp4,Saved
+146,0,2026-04-27 23:56:03,20926.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0146.mp4,Saved
+147,0,2026-04-27 23:56:20,20943.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0147.mp4,Saved
+148,0,2026-04-27 23:57:07,20990.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0148.mp4,Saved
+149,0,2026-04-28 00:26:44,22767.5,15.0,2.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0149.mp4,Saved
+150,0,2026-04-28 00:26:58,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+151,0,2026-04-28 00:27:00,22783.5,18.0,4.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0151.mp4,Saved
+152,0,2026-04-28 00:28:57,22900.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0152.mp4,Saved
+153,0,2026-04-28 01:07:21,25204.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0153.mp4,Saved
+154,0,2026-04-28 01:55:54,28117.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0154.mp4,Saved
+155,0,2026-04-28 02:10:06,28969.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0155.mp4,Saved
+156,0,2026-04-28 03:46:15,34738.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0156.mp4,Saved
+157,0,2026-04-28 03:46:30,34753.5,18.0,3.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0157.mp4,Saved
+158,0,2026-04-28 03:47:06,34789.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0158.mp4,Saved
+159,0,2026-04-28 03:48:14,34857.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0159.mp4,Saved
+160,0,2026-04-28 04:21:38,36861.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0160.mp4,Saved
+161,0,2026-04-28 04:27:46,37229.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0161.mp4,Saved
+162,0,2026-04-28 04:51:15,38638.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0162.mp4,Saved
+163,0,2026-04-28 04:51:58,38681.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0163.mp4,Saved
+164,0,2026-04-28 04:52:56,38739.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0164.mp4,Saved
+165,0,2026-04-28 05:09:21,39724.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0165.mp4,Saved
+166,0,2026-04-28 06:25:54,44317.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0166.mp4,Saved
+167,0,2026-04-28 06:39:52,45155.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0167.mp4,Saved
+168,0,2026-04-28 06:40:22,45185.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0168.mp4,Saved
+169,0,2026-04-28 06:51:42,45865.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0169.mp4,Saved
+170,0,2026-04-28 06:52:29,45912.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0170.mp4,Saved
+171,0,2026-04-28 06:53:14,45957.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0171.mp4,Saved
+172,0,2026-04-28 06:54:08,46011.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0172.mp4,Saved
+173,0,2026-04-28 06:54:25,46028.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0173.mp4,Saved
+174,0,2026-04-28 06:55:35,46098.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0174.mp4,Saved
+175,0,2026-04-28 06:56:21,46144.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0175.mp4,Saved
+176,0,2026-04-28 06:56:41,46164.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0176.mp4,Saved
+177,0,2026-04-28 06:57:07,46190.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0177.mp4,Saved
+178,0,2026-04-28 06:57:44,46227.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0178.mp4,Saved
+179,0,2026-04-28 06:59:23,46326.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0179.mp4,Saved
+180,0,2026-04-28 07:00:16,46379.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0180.mp4,Saved
+181,0,2026-04-28 07:00:38,46401.5,17.0,3.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0181.mp4,Saved
+182,0,2026-04-28 07:04:54,46657.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0182.mp4,Saved
+183,0,2026-04-28 07:05:17,46680.5,16.0,3.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0183.mp4,Saved
+184,0,2026-04-28 07:05:32,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+185,0,2026-04-28 07:06:04,46727.5,14.0,0.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0185.mp4,Saved
+186,0,2026-04-28 07:06:17,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+187,0,2026-04-28 07:06:28,46751.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0187.mp4,Saved
+188,0,2026-04-28 07:07:25,46808.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0188.mp4,Saved
+189,0,2026-04-28 07:08:23,46866.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0189.mp4,Saved
+190,0,2026-04-28 07:08:59,46902.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0190.mp4,Saved
+191,0,2026-04-28 07:12:57,47140.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0191.mp4,Saved
+192,0,2026-04-28 07:13:11,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+193,0,2026-04-28 07:13:13,47156.5,15.0,3.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0193.mp4,Saved
+194,0,2026-04-28 07:13:27,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+195,0,2026-04-28 07:13:38,47181.5,12.0,1.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0195.mp4,Saved
+196,0,2026-04-28 07:14:24,47227.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0196.mp4,Saved
+197,0,2026-04-28 07:14:40,47243.5,15.0,3.0,10.0,1.0,No,possible_feed_clips\bee_0\bee_0_feed_0197.mp4,Saved
+198,0,2026-04-28 07:14:54,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+199,0,2026-04-28 07:15:02,47265.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0199.mp4,Saved
+200,0,2026-04-28 07:15:19,47282.5,15.0,2.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0200.mp4,Saved
+201,0,2026-04-28 07:15:33,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+202,0,2026-04-28 07:19:42,47545.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0202.mp4,Saved
+203,0,2026-04-28 07:21:04,47627.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0203.mp4,Saved
+204,0,2026-04-28 07:22:40,47723.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0204.mp4,Saved
+205,0,2026-04-28 07:23:22,47765.5,12.0,1.0,10.0,0.0,No,possible_feed_clips\bee_0\bee_0_feed_0205.mp4,Saved
+206,0,2026-04-28 07:23:33,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+207,0,2026-04-28 07:23:53,47796.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0207.mp4,Saved
+208,0,2026-04-28 07:25:54,47917.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0208.mp4,Saved
+209,0,2026-04-28 07:27:35,48018.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0209.mp4,Saved
+210,0,2026-04-28 07:27:51,48034.5,18.0,3.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0210.mp4,Saved
+211,0,2026-04-28 07:28:18,48061.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0211.mp4,Saved
+212,0,2026-04-28 07:29:02,48105.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0212.mp4,Saved
+213,0,2026-04-28 07:29:39,48142.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0213.mp4,Saved
+214,0,2026-04-28 07:29:59,48162.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0214.mp4,Saved
+215,0,2026-04-28 07:31:15,48238.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0215.mp4,Saved
+216,0,2026-04-28 07:34:15,48418.5,16.0,1.0,11.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0216.mp4,Saved
+217,0,2026-04-28 07:35:45,48508.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0217.mp4,Saved
+218,0,2026-04-28 07:36:42,48565.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0218.mp4,Saved
+219,0,2026-04-28 07:38:11,48654.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0219.mp4,Saved
+220,0,2026-04-28 07:39:01,48704.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0220.mp4,Saved
+221,0,2026-04-28 07:39:17,48720.5,18.0,3.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0221.mp4,Saved
+222,0,2026-04-28 07:40:02,48765.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0222.mp4,Saved
+223,0,2026-04-28 07:40:50,48813.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0223.mp4,Saved
+224,0,2026-04-28 07:41:14,48837.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0224.mp4,Saved
+225,0,2026-04-28 07:41:57,48880.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0225.mp4,Saved
+226,0,2026-04-28 07:42:33,48916.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0226.mp4,Saved
+227,0,2026-04-28 07:44:45,49048.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0227.mp4,Saved
+228,0,2026-04-28 07:48:33,49276.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0228.mp4,Saved
+229,0,2026-04-28 07:50:14,49377.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0229.mp4,Saved
+230,0,2026-04-28 07:50:38,49401.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0230.mp4,Saved
+231,0,2026-04-28 07:51:37,49460.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0231.mp4,Saved
+232,0,2026-04-28 08:01:04,50027.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0232.mp4,Saved
+233,0,2026-04-28 08:01:59,50082.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0233.mp4,Saved
+234,0,2026-04-28 08:06:35,50358.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0234.mp4,Saved
+235,0,2026-04-28 08:07:33,50416.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0235.mp4,Saved
+236,0,2026-04-28 08:09:56,50559.5,14.0,1.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0236.mp4,Saved
+237,0,2026-04-28 08:10:09,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+238,0,2026-04-28 08:10:12,50575.5,18.0,4.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0238.mp4,Saved
+239,0,2026-04-28 08:10:39,50602.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0239.mp4,Saved
+240,0,2026-04-28 08:12:01,50684.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0240.mp4,Saved
+241,0,2026-04-28 08:12:38,50721.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0241.mp4,Saved
+242,0,2026-04-28 08:13:17,50760.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0242.mp4,Saved
+243,0,2026-04-28 08:14:06,50809.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0243.mp4,Saved
+244,0,2026-04-28 08:15:21,50884.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0244.mp4,Saved
+245,0,2026-04-28 08:15:48,50911.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0245.mp4,Saved
+246,0,2026-04-28 08:35:20,52083.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0246.mp4,Saved
+247,0,2026-04-28 08:36:06,52129.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0247.mp4,Saved
+248,0,2026-04-28 08:37:56,52239.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0248.mp4,Saved
+249,0,2026-04-28 08:42:20,52503.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0249.mp4,Saved
+250,0,2026-04-28 08:44:07,52610.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0250.mp4,Saved
+251,0,2026-04-28 08:44:38,52641.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0251.mp4,Saved
+252,0,2026-04-28 08:45:36,52699.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0252.mp4,Saved
+253,0,2026-04-28 08:47:19,52802.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0253.mp4,Saved
+254,0,2026-04-28 08:47:33,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+255,0,2026-04-28 08:47:35,52818.5,18.0,3.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0255.mp4,Saved
+256,0,2026-04-28 08:48:15,52858.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0256.mp4,Saved
+257,0,2026-04-28 09:02:01,53684.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0257.mp4,Saved
+258,0,2026-04-28 09:03:22,53765.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0258.mp4,Saved
+259,0,2026-04-28 09:04:46,53849.5,14.0,1.0,10.0,2.0,No,possible_feed_clips\bee_0\bee_0_feed_0259.mp4,Saved
+260,0,2026-04-28 09:04:59,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+261,0,2026-04-28 09:05:14,53877.5,15.0,0.0,11.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0261.mp4,Saved
+262,0,2026-04-28 09:05:44,53907.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0262.mp4,Saved
+263,0,2026-04-28 09:09:20,54123.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0263.mp4,Saved
+264,0,2026-04-28 09:15:05,54468.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0264.mp4,Saved
+265,0,2026-04-28 09:15:56,54519.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0265.mp4,Saved
+266,0,2026-04-28 09:23:27,54970.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0266.mp4,Saved
+267,0,2026-04-28 09:23:55,54998.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0267.mp4,Saved
+268,0,2026-04-28 09:24:11,,,0.0,0.0,0.0,Yes,,Skipped: zero duration
+269,0,2026-04-28 09:24:12,55015.5,18.0,3.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0269.mp4,Saved
+270,0,2026-04-28 09:26:31,55154.5,15.0,1.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0270.mp4,Saved
+271,0,2026-04-28 09:39:24,55927.5,15.0,0.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0271.mp4,Saved
+272,0,2026-04-28 09:40:06,55969.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0272.mp4,Saved
+273,0,2026-04-28 09:40:32,55995.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0273.mp4,Saved
+274,0,2026-04-28 09:57:53,57036.5,16.0,2.0,10.0,3.0,No,possible_feed_clips\bee_0\bee_0_feed_0274.mp4,Saved
+275,0,2026-04-28 10:00:34,57197.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0275.mp4,Saved
+276,0,2026-04-28 10:02:13,57296.5,16.0,1.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0276.mp4,Saved
+277,0,2026-04-28 10:56:21,60544.5,17.0,2.0,10.0,4.0,No,possible_feed_clips\bee_0\bee_0_feed_0277.mp4,Saved

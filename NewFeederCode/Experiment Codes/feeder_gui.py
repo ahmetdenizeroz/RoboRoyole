@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
                                                                             #
         self.spin_thresh1 = QSpinBox()                                      #
         self.spin_thresh1.setRange(0, 4095)                                 #
-        self.spin_thresh1.setValue(600)                                     #
+        self.spin_thresh1.setValue(512)                                     #
                                                                             #
         self.spin_hysterisis1 = QSpinBox()                                  #
         self.spin_hysterisis1.setRange(0, 4095)                             #
@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
                                                                             #
         self.spin_thresh2 = QSpinBox()                                      #
         self.spin_thresh2.setRange(0, 4095)                                 #
-        self.spin_thresh2.setValue(580)                                     #
+        self.spin_thresh2.setValue(512)                                     #
                                                                             #
         self.spin_hysterisis2 = QSpinBox()                                  #
         self.spin_hysterisis2.setRange(0, 4095)                             #
@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
                                                                             #
         self.spin_thresh3 = QSpinBox()                                      #
         self.spin_thresh3.setRange(0, 4095)                                 #
-        self.spin_thresh3.setValue(530)                                     #
+        self.spin_thresh3.setValue(512)                                     #
                                                                             #
         self.spin_hysterisis3 = QSpinBox()                                  #
         self.spin_hysterisis3.setRange(0, 4095)                             #
@@ -339,8 +339,8 @@ class MainWindow(QMainWindow):
             ("Min Bee Area", "slider_area", 2000, 5000),
             ("ROI X", "slider_roi_x", 0, 1920),
             ("ROI Y", "slider_roi_y", 0, 1080),
-            ("ROI W", "slider_roi_w", 100, 1920),
-            ("ROI h", "slider_roi_h", 100, 1080)
+            ("ROI W", "slider_roi_w", 640, 1920),
+            ("ROI h", "slider_roi_h", 480, 1080)
         ]
         self.sliders = {}
         for i, (name, attr, default, maximum) in enumerate(slider_configs):

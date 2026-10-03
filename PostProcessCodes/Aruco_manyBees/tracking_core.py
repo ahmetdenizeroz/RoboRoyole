@@ -8,8 +8,8 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from kalman_filter import KalmanFilter
-from single_bee_detector_core import (
+from workers.kalman_filter_worker import KalmanFilter
+from bee_detector_core import (
     AdaptiveRollingBackground,
     SingleBeeDetector,
     arena_bbox_from_mask,
@@ -18,6 +18,8 @@ from single_bee_detector_core import (
     imread_unicode,
     load_settings_txt,
 )
+from workers.yolo_worker import get_cached_worker as get_cached_yolo_worker
+from workers.detr_worker import get_cached_worker as get_cached_detr_worker
 
 
 Point = Tuple[float, float]
@@ -169,12 +171,26 @@ class TrackingEngine:
         detector = SingleBeeDetector(self.detector_settings)
         background_mode = str(self.detector_settings.preprocess.background_mode).strip().lower()
 
+        detection_method = str(self.detector_settings.detection_method).strip().lower()
+        if detection_method == "yolo":
+            y = self.detector_settings.yolo
+            yolo_worker = get_cached_yolo_worker(y.model_path, y.device)
+            if not yolo_worker.load():
+                raise RuntimeError(f"Could not load YOLO model: {yolo_worker.load_error}")
+            detector.set_yolo_worker(yolo_worker)
+        elif detection_method == "detr":
+            dtc = self.detector_settings.detr
+            detr_worker = get_cached_detr_worker(dtc.model_path, dtc.device, dtc.variant)
+            if not detr_worker.load():
+                raise RuntimeError(f"Could not load RF-DETR model: {detr_worker.load_error}")
+            detector.set_detr_worker(detr_worker)
+
         adaptive_crop_bbox: Optional[Tuple[int, int, int, int]] = None
         if bool(self.detector_settings.preprocess.crop_to_arena_bbox):
             adaptive_crop_bbox = arena_bbox_from_mask(arena_mask, (self.frame_height, self.frame_width), margin=2)
 
         static_background = None
-        if background_mode == "static":
+        if background_mode == "static" and detection_method not in ("yolo", "detr"):
             if not self.background_path:
                 raise RuntimeError("Detector preset uses static background, but no background_path was provided.")
             static_background = imread_unicode(self.background_path, cv2.IMREAD_UNCHANGED)
@@ -188,7 +204,7 @@ class TrackingEngine:
                 )
 
         adaptive_bg: Optional[AdaptiveRollingBackground] = None
-        if background_mode == "adaptive":
+        if background_mode == "adaptive" and detection_method not in ("yolo", "detr"):
             adaptive_bg = AdaptiveRollingBackground(
                 channel=self.detector_settings.preprocess.channel,
                 max_history=self.detector_settings.preprocess.adaptive_history_length,
@@ -239,15 +255,18 @@ class TrackingEngine:
                     bg_channel = adaptive_bg.get_background()
                     bg_history_count = adaptive_bg.history_count
 
-                # Note: SingleBeeDetector handles multiple IDs internally now,
-                # so we pass previous_position=None
+                # Pass the previous position for single-bee tracking so max_jump_px works
+                prev_pos = None
+                if len(self.marker_ids) == 1:
+                    prev_pos = last_filtered_pos.get(self.marker_ids[0])
+                
                 result = detector.detect(
                     frame,
                     background_bgr=static_background,
                     background_channel=bg_channel,
                     background_history_count=bg_history_count,
                     arena_mask=arena_mask,
-                    previous_position=None,
+                    previous_position=prev_pos,
                 )
 
             if adaptive_bg is not None:
@@ -450,6 +469,18 @@ class TrackingEngine:
 
             ds = self.detector_settings
             f.write("# Single Bee Detector Settings Summary\n")
+            f.write(f"detection_method\t{ds.detection_method}\n")
+            if str(ds.detection_method).strip().lower() == "yolo":
+                f.write(f"yolo_model_path\t{ds.yolo.model_path}\n")
+                f.write(f"yolo_confidence\t{ds.yolo.confidence}\n")
+                f.write(f"yolo_iou_threshold\t{ds.yolo.iou_threshold}\n")
+                f.write(f"yolo_device\t{ds.yolo.device}\n")
+                f.write(f"yolo_imgsz\t{ds.yolo.imgsz}\n")
+            elif str(ds.detection_method).strip().lower() == "detr":
+                f.write(f"detr_model_path\t{ds.detr.model_path}\n")
+                f.write(f"detr_confidence\t{ds.detr.confidence}\n")
+                f.write(f"detr_device\t{ds.detr.device}\n")
+                f.write(f"detr_variant\t{ds.detr.variant}\n")
             f.write(f"background_mode\t{ds.preprocess.background_mode}\n")
             f.write(f"adaptive_history_length\t{ds.preprocess.adaptive_history_length}\n")
             f.write(f"adaptive_background_method\t{ds.preprocess.adaptive_background_method}\n")
