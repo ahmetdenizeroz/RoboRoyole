@@ -1,0 +1,324 @@
+const EXPERIMENTS_DATA = [
+  {
+    "id": "exp-1",
+    "folder_name": "1-25082026SoloQueen",
+    "number": 1,
+    "display_title": "Solo Queen 1",
+    "date": "25/08/2026",
+    "has_merged": false,
+    "duration": "10:00:00",
+    "total_frames": 1080000,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/1-25082026SoloQueen/2026-08-27_output/2026-08-27_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/1-25082026SoloQueen/2026-08-27_output/2026-08-27_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/1-25082026SoloQueen/2026-08-27_output/2026-08-27_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/1-25082026SoloQueen/2026-08-27_output/2026-08-27_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "2026-08-27_trajectory_id_1.png",
+        "label": "Queen Trajectory Map",
+        "path": "Experiments/SoloQueen/1-25082026SoloQueen/2026-08-27_output/2026-08-27_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-2",
+    "folder_name": "2-09092026SoloQueen",
+    "number": 2,
+    "display_title": "Solo Queen 2",
+    "date": "09/09/2026",
+    "has_merged": true,
+    "duration": "08:00:00",
+    "total_frames": 864000,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/2-09092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/2-09092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/2-09092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/2-09092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "first_four_hour_trajectory_id_1.png",
+        "label": "Part 1 Trajectory (0 - 4h)",
+        "path": "Experiments/SoloQueen/2-09092026SoloQueen/first4hour/first_four_hour_output/first_four_hour_trajectory_id_1.png"
+      },
+      {
+        "filename": "SecondFourHour_trajectory_id_1.png",
+        "label": "Part 2 Trajectory (4 - 8h)",
+        "path": "Experiments/SoloQueen/2-09092026SoloQueen/second4hour/SecondFourHour_output/SecondFourHour_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-3",
+    "folder_name": "3-18092026SoloQueen",
+    "number": 3,
+    "display_title": "Solo Queen 3",
+    "date": "18/09/2026",
+    "has_merged": true,
+    "duration": "08:49:59",
+    "total_frames": 953970,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/3-18092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/3-18092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/3-18092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/3-18092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "firstfourhours_trajectory_id_1.png",
+        "label": "Part 1 Trajectory (0 - 4h)",
+        "path": "Experiments/SoloQueen/3-18092026SoloQueen/firstfour/firstfourhours_output/firstfourhours_trajectory_id_1.png"
+      },
+      {
+        "filename": "second4hours_trajectory_id_1.png",
+        "label": "Part 2 Trajectory (4 - 8h)",
+        "path": "Experiments/SoloQueen/3-18092026SoloQueen/secondfour/second4hours_output/second4hours_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-4",
+    "folder_name": "4-22092026SoloQueen",
+    "number": 4,
+    "display_title": "Solo Queen 4",
+    "date": "22/09/2026",
+    "has_merged": true,
+    "duration": "08:30:00",
+    "total_frames": 918000,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/4-22092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/4-22092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/4-22092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/4-22092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "Queen4Part1_trajectory_id_1.png",
+        "label": "Part 1 Trajectory (0 - 4h)",
+        "path": "Experiments/SoloQueen/4-22092026SoloQueen/FirstPart/Queen4Part1_output/Queen4Part1_trajectory_id_1.png"
+      },
+      {
+        "filename": "SecondPart_trajectory_id_1.png",
+        "label": "Part 2 Trajectory (4 - 8h)",
+        "path": "Experiments/SoloQueen/4-22092026SoloQueen/SecondPart/SecondPart_output/SecondPart_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-5",
+    "folder_name": "5-23092026SoloQueen",
+    "number": 5,
+    "display_title": "Solo Queen 5",
+    "date": "23/09/2026",
+    "has_merged": true,
+    "duration": "07:59:58",
+    "total_frames": 863940,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/5-23092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/5-23092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/5-23092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/5-23092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "FirstPart_trajectory_id_1.png",
+        "label": "Part 1 Trajectory (0 - 4h)",
+        "path": "Experiments/SoloQueen/5-23092026SoloQueen/FirstPart/FirstPart_output/FirstPart_trajectory_id_1.png"
+      },
+      {
+        "filename": "SecondPart_trajectory_id_1.png",
+        "label": "Part 2 Trajectory (4 - 8h)",
+        "path": "Experiments/SoloQueen/5-23092026SoloQueen/SecondPart/SecondPart_output/SecondPart_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-6",
+    "folder_name": "6-25092026SoloQueen",
+    "number": 6,
+    "display_title": "Solo Queen 6",
+    "date": "25/09/2026",
+    "has_merged": true,
+    "duration": "07:55:50",
+    "total_frames": 856500,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/6-25092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/6-25092026SoloQueen/merged/merged_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/6-25092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/6-25092026SoloQueen/merged/merged_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "FirstPart_trajectory_id_1.png",
+        "label": "Part 1 Trajectory (0 - 4h)",
+        "path": "Experiments/SoloQueen/6-25092026SoloQueen/first part/FirstPart_output/FirstPart_trajectory_id_1.png"
+      },
+      {
+        "filename": "secondpart_trajectory_id_1.png",
+        "label": "Part 2 Trajectory (4 - 8h)",
+        "path": "Experiments/SoloQueen/6-25092026SoloQueen/second part/secondpart_output/secondpart_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-7",
+    "folder_name": "7-28092026SoloQueen",
+    "number": 7,
+    "display_title": "Solo Queen 7",
+    "date": "28/09/2026",
+    "has_merged": false,
+    "duration": "08:50:15",
+    "total_frames": 954450,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/7-28092026SoloQueen/2026-10-01_output/2026-10-01_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/7-28092026SoloQueen/2026-10-01_output/2026-10-01_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/7-28092026SoloQueen/2026-10-01_output/2026-10-01_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/7-28092026SoloQueen/2026-10-01_output/2026-10-01_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "2026-10-01_trajectory_id_1.png",
+        "label": "Queen Trajectory Map",
+        "path": "Experiments/SoloQueen/7-28092026SoloQueen/2026-10-01_output/2026-10-01_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-8",
+    "folder_name": "8-29092026SoloQueen",
+    "number": 8,
+    "display_title": "Solo Queen 8",
+    "date": "29/09/2026",
+    "has_merged": false,
+    "duration": "08:00:00",
+    "total_frames": 864000,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/8-29092026SoloQueen/soloqueen8_output/soloqueen8_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/8-29092026SoloQueen/soloqueen8_output/soloqueen8_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/8-29092026SoloQueen/soloqueen8_output/soloqueen8_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/8-29092026SoloQueen/soloqueen8_output/soloqueen8_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "soloqueen8_trajectory_id_1.png",
+        "label": "Queen Trajectory Map",
+        "path": "Experiments/SoloQueen/8-29092026SoloQueen/soloqueen8_output/soloqueen8_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-9",
+    "folder_name": "9-02102026SoloQueen",
+    "number": 9,
+    "display_title": "Solo Queen 9",
+    "date": "02/10/2026",
+    "has_merged": false,
+    "duration": "08:00:00",
+    "total_frames": 864000,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/9-02102026SoloQueen/2026-10-03_output/2026-10-03_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/9-02102026SoloQueen/2026-10-03_output/2026-10-03_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/9-02102026SoloQueen/2026-10-03_output/2026-10-03_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/9-02102026SoloQueen/2026-10-03_output/2026-10-03_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "2026-10-03_trajectory_id_1.png",
+        "label": "Queen Trajectory Map",
+        "path": "Experiments/SoloQueen/9-02102026SoloQueen/2026-10-03_output/2026-10-03_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-10",
+    "folder_name": "10-06102026SoloQueen",
+    "number": 10,
+    "display_title": "Solo Queen 10",
+    "date": "06/10/2026",
+    "has_merged": false,
+    "duration": "08:00:00",
+    "total_frames": 864000,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/10-06102026SoloQueen/2026-10-06_output/2026-10-06_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/10-06102026SoloQueen/2026-10-06_output/2026-10-06_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/10-06102026SoloQueen/2026-10-06_output/2026-10-06_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/10-06102026SoloQueen/2026-10-06_output/2026-10-06_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "2026-10-06_trajectory_id_1.png",
+        "label": "Queen Trajectory Map",
+        "path": "Experiments/SoloQueen/10-06102026SoloQueen/2026-10-06_output/2026-10-06_trajectory_id_1.png"
+      }
+    ]
+  },
+  {
+    "id": "exp-11",
+    "folder_name": "11-09102026SoloQueen",
+    "number": 11,
+    "display_title": "Solo Queen 11",
+    "date": "09/10/2026",
+    "has_merged": false,
+    "duration": "08:00:00",
+    "total_frames": 864000,
+    "plots": {
+      "filtered": {
+        "analysis": "Experiments/SoloQueen/11-09102026SoloQueen/2026-10-12_output/2026-10-12_analysis_output/plots/filtered/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/11-09102026SoloQueen/2026-10-12_output/2026-10-12_analysis_output/plots/filtered/ID_1_heatmap.png"
+      },
+      "raw": {
+        "analysis": "Experiments/SoloQueen/11-09102026SoloQueen/2026-10-12_output/2026-10-12_analysis_output/plots/raw/ID_1_analysis_plots.png",
+        "heatmap": "Experiments/SoloQueen/11-09102026SoloQueen/2026-10-12_output/2026-10-12_analysis_output/plots/raw/ID_1_heatmap.png"
+      }
+    },
+    "trajectories": [
+      {
+        "filename": "2026-10-12_trajectory_id_1.png",
+        "label": "Queen Trajectory Map",
+        "path": "Experiments/SoloQueen/11-09102026SoloQueen/2026-10-12_output/2026-10-12_trajectory_id_1.png"
+      }
+    ]
+  }
+];

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RoboRoyale — Solo Queen Behavioral Tracking Observatory</title>
+  <meta name="description" content="Automated video tracking, kinematics, and spatial heatmap analysis for Solo Queen honeybee experiments.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
+</head>
+<body>
+
+  <!-- ======================================================================
+       Left Sidebar Navigation
+       ====================================================================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="#" class="brand-wrapper">
+        <div class="brand-icon">
+          <!-- Crown / Bee Icon -->
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>RoboRoyale <span class="brand-badge">SoloQueen</span></h1>
+          <p>Behavioral Tracking Observatory</p>
+        </div>
+      </a>
+
+      <!-- Quick Search / Filter -->
+      <div class="search-container">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search experiments or dates...">
+      </div>
+    </div>
+
+    <!-- Quick Sidebar Stats -->
+    <div class="sidebar-stats">
+      <span>Total Sessions: <strong>11</strong></span>
+      <span>Total Tracked: <strong>~92h</strong></span>
+    </div>
+
+    <!-- Scrollable Experiments List -->
+    <nav class="experiment-list" id="experimentList" aria-label="Experiment Sessions">
+      <!-- Dynamic Experiment items rendered by app.js -->
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="https://github.com/ahmetdenizeroz/RoboRoyole" target="_blank" rel="noopener" class="github-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        GitHub Repository
+      </a>
+      <span>v1.0</span>
+    </div>
+  </aside>
+
+  <!-- ======================================================================
+       Main Content Area
+       ====================================================================== -->
+  <main class="main-content">
+    <!-- Top Sticky Header -->
+    <header class="top-header">
+      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Navigation">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="header-title-group">
+        <h2 class="header-title" id="activeExpTitle">Solo Queen 7 — 28/09/2026</h2>
+        <div class="header-badges">
+          <span class="badge-pill badge-duration" id="expDurationBadge">⏱ 08:50:15</span>
+          <span class="badge-pill badge-status">
+            <span class="status-dot"></span> Completed
+          </span>
+          <span class="badge-pill badge-duration" id="expTypeBadge">Standard Analysis</span>
+        </div>
+      </div>
+
+      <!-- Header Controls: Mode Toggle & Navigation -->
+      <div class="header-actions">
+        <!-- Segmented Toggle: Filtered vs Raw -->
+        <div class="mode-toggle" role="group" aria-label="Plot Data Processing Mode">
+          <button class="mode-btn mode-filtered active" id="modeFilteredBtn" title="Show Kalman Filtered & Smoothed Data">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            Filtered
+          </button>
+          <button class="mode-btn mode-raw" id="modeRawBtn" title="Show Raw Tracking Marker Detections">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Raw
+          </button>
+        </div>
+
+        <!-- Previous / Next Experiment Navigation -->
+        <div class="nav-btn-group">
+          <button class="nav-btn" id="prevExpBtn" title="Previous Experiment (Left Arrow)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <button class="nav-btn" id="nextExpBtn" title="Next Experiment (Right Arrow)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Vertical Container -->
+    <div class="content-container">
+      
+      <!-- Session Telemetry Hero Card -->
+      <section class="experiment-hero-card" aria-label="Experiment Details">
+        <div class="hero-meta-grid">
+          <div class="hero-stat">
+            <span class="hero-stat-label">Session ID</span>
+            <span class="hero-stat-value" id="heroTitle">Solo Queen 7</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Experiment Date</span>
+            <span class="hero-stat-value" id="heroDate">28/09/2026</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Tracking Duration</span>
+            <span class="hero-stat-value" id="heroDuration">08:50:15</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Total Frames (30 fps)</span>
+            <span class="hero-stat-value" id="heroFrames">954,450</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Pipeline Type</span>
+            <span class="hero-stat-value" id="heroAnalysisType">Single Session (8h+)</span>
+          </div>
+        </div>
+        <p class="hero-description">
+          Automated Queen tracking using computer vision background subtraction with Kalman prediction filtering and stimulus interaction detection.
+        </p>
+      </section>
+
+      <!-- ==================================================================
+           VERTICAL DISPLAY 1: Behavioral Metrics & Analysis Plots
+           ================================================================== -->
+      <article class="plot-card" id="cardAnalysis">
+        <header class="plot-card-header">
+          <div class="plot-title-group">
+            <div class="plot-icon icon-chart">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </div>
+            <div class="plot-title-text">
+              <h3>Behavioral Metrics & Analysis Graphs</h3>
+              <p>Velocity, cumulative distance, feeding contact bouts, and temporal activity patterns.</p>
+            </div>
+          </div>
+          <div class="plot-card-actions">
+            <a href="#" target="_blank" class="card-action-btn" id="analysisPlotLink">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              Open Full
+            </a>
+            <a href="#" download class="card-action-btn" id="analysisDownloadBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Save PNG
+            </a>
+          </div>
+        </header>
+
+        <div class="plot-image-container">
+          <div class="plot-image-wrapper">
+            <img src="" alt="Solo Queen Analysis Plots" id="analysisPlotImg" class="plot-image" loading="lazy">
+            <div class="plot-hover-hint">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+              Click to Zoom & Pan
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ==================================================================
+           VERTICAL DISPLAY 2: Spatial Density Heatmap
+           ================================================================== -->
+      <article class="plot-card" id="cardHeatmap">
+        <header class="plot-card-header">
+          <div class="plot-title-group">
+            <div class="plot-icon icon-heat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div class="plot-title-text">
+              <h3>Spatial Density Heatmap</h3>
+              <p>Two-dimensional Gaussian kernel density estimation of queen occupancy across the arena.</p>
+            </div>
+          </div>
+          <div class="plot-card-actions">
+            <a href="#" target="_blank" class="card-action-btn" id="heatmapLink">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              Open Full
+            </a>
+            <a href="#" download class="card-action-btn" id="heatmapDownloadBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Save PNG
+            </a>
+          </div>
+        </header>
+
+        <div class="plot-image-container">
+          <div class="plot-image-wrapper">
+            <img src="" alt="Solo Queen Spatial Density Heatmap" id="heatmapImg" class="plot-image" loading="lazy">
+            <div class="plot-hover-hint">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+              Click to Zoom & Pan
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ==================================================================
+           VERTICAL DISPLAY 3: Arena Trajectory Map
+           ================================================================== -->
+      <article class="plot-card" id="cardTrajectory">
+        <header class="plot-card-header">
+          <div class="plot-title-group">
+            <div class="plot-icon icon-track">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div class="plot-title-text">
+              <h3>Arena Trajectory Map</h3>
+              <p>Full path traversal and coordinate history mapped over the experimental chamber arena.</p>
+            </div>
+          </div>
+        </header>
+
+        <div class="plot-image-container" id="trajectoryContainer">
+          <!-- Single or Multi-part trajectory images rendered dynamically -->
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <!-- ======================================================================
+       High-Resolution Image Lightbox Modal
+       ====================================================================== -->
+  <div class="lightbox-modal" id="lightboxModal" role="dialog" aria-modal="true" aria-label="Image Zoom Viewer">
+    <div class="lightbox-header">
+      <span class="lightbox-title" id="lightboxTitle">Image Viewer</span>
+      <div class="lightbox-controls">
+        <button class="lightbox-btn" id="zoomInBtn" title="Zoom In (+)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Zoom In
+        </button>
+        <button class="lightbox-btn" id="zoomOutBtn" title="Zoom Out (-)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Zoom Out
+        </button>
+        <button class="lightbox-btn" id="zoomResetBtn" title="Reset Zoom (100%)">
+          Reset (1:1)
+        </button>
+        <button class="lightbox-btn lightbox-close-btn" id="lightboxCloseBtn" title="Close (Esc)">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+    <div class="lightbox-body">
+      <img src="" alt="Zoomed View" id="lightboxImg" class="lightbox-img">
+    </div>
+  </div>
+
+  <!-- Application Scripts -->
+  <script src="experiments_data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
