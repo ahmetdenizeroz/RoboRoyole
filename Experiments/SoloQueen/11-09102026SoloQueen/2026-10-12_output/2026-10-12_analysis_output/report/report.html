@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>2026-10-12 report</title>
+  <link rel="stylesheet" href="report.css" />
+</head>
+<body>
+<header>
+  <h1 style="margin:0 0 8px 0;">2026-10-12 tracking report</h1>
+  <div id="status">Offline report. Data for each bee loads on demand.</div>
+</header>
+<main>
+  <section class="controls panel">
+    <label>Bee<select id="beeSelect"></select></label>
+    <label>Mode<select id="modeSelect"><option value="raw">Raw</option><option value="filtered">Filtered</option><option value="compare">Compare Raw vs Filtered</option></select></label>
+  </section>
+  <section class="panel"><div id="summaryCards"></div></section>
+  <section class="panel"><div id="shapeList" class="info-row"></div></section>
+  <section class="grid">
+    <div class="panel"><h3>Trajectory</h3><div id="trajectoryChart" class="chart"></div></div>
+    <div class="panel"><h3>Raw vs Filtered</h3><div id="compareChart" class="chart"></div></div>
+    <div class="panel"><h3>Position</h3><div id="positionChart" class="chart"></div></div>
+    <div class="panel"><h3>Angle</h3><div id="angleChart" class="chart"></div></div>
+    <div class="panel"><h3>Speed</h3><div id="speedChart" class="chart"></div></div>
+    <div class="panel"><h3>Inside / State Timeline</h3><div id="stateChart" class="chart"></div></div>
+    <div class="panel"><h3>Distances</h3><div id="distanceChart" class="chart"></div></div>
+    <div class="panel"><h3>Binned Metrics</h3><div id="binnedChart" class="chart"></div></div>
+  </section>
+</main>
+<script src="plotly.min.js"></script>
+<script src="report_data.js"></script>
+<script src="report.js"></script>
+</body></html>

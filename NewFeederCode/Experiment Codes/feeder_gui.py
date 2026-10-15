@@ -136,31 +136,31 @@ class MainWindow(QMainWindow):
                                                                             #
         self.spin_thresh1 = QSpinBox()                                      #
         self.spin_thresh1.setRange(0, 4095)                                 #
-        self.spin_thresh1.setValue(512)                                     #
+        self.spin_thresh1.setValue(1500)                                     #
                                                                             #
         self.spin_hysterisis1 = QSpinBox()                                  #
         self.spin_hysterisis1.setRange(0, 4095)                             #
-        self.spin_hysterisis1.setValue(60)                                 #
+        self.spin_hysterisis1.setValue(120)                                 #
                                                                             #
         self.spin_thresh2 = QSpinBox()                                      #
         self.spin_thresh2.setRange(0, 4095)                                 #
-        self.spin_thresh2.setValue(512)                                     #
+        self.spin_thresh2.setValue(1000)                                     #
                                                                             #
         self.spin_hysterisis2 = QSpinBox()                                  #
         self.spin_hysterisis2.setRange(0, 4095)                             #
-        self.spin_hysterisis2.setValue(60)                                 #
+        self.spin_hysterisis2.setValue(300)                                 #
                                                                             #
         self.spin_thresh3 = QSpinBox()                                      #
         self.spin_thresh3.setRange(0, 4095)                                 #
-        self.spin_thresh3.setValue(512)                                     #
+        self.spin_thresh3.setValue(800)                                     #
                                                                             #
         self.spin_hysterisis3 = QSpinBox()                                  #
         self.spin_hysterisis3.setRange(0, 4095)                             #
-        self.spin_hysterisis3.setValue(60)  
+        self.spin_hysterisis3.setValue(550)  
         
         self.spin_margin = QSpinBox()                                       #
         self.spin_margin.setRange(0, 5000)                                  #
-        self.spin_margin.setValue(50)                                       #
+        self.spin_margin.setValue(1000)                                       #
                                                                             #
         self.btn_apply_electrodes = QPushButton("Apply Electrode Settings") #
         self.btn_reset_cal = QPushButton("Reset Step Calibration")
@@ -254,8 +254,8 @@ class MainWindow(QMainWindow):
         motor_layout = QGridLayout()                                        #
         motor_layout.setColumnStretch(0, 1)                                 #
         motor_layout.setColumnStretch(1, 1)                                 #
-        self.speed_input = QLineEdit("1000")                                #   
-        self.accel_input = QLineEdit("500")                                 #   
+        self.speed_input = QLineEdit("3000")                                #   
+        self.accel_input = QLineEdit("2000")                                 #   
         self.btn_apply_motor = QPushButton("Apply Motor Settings")          #
                                                                             #
         # --- NEW Start/Stop Button ---                                     #

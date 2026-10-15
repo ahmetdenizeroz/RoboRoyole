@@ -81,13 +81,13 @@ class FeederController(QObject):
             "autofocus": True,
             "focus": 0,
             # Electrodes
-            "threshold_1": 512,
-            "threshold_2": 512,
-            "threshold_3": 512,
-            "hysterisis_1": 60,
-            "hysterisis_2": 60,
-            "hysterisis_3": 60,
-            "margin": 50,
+            "threshold_1": 1500,
+            "threshold_2": 1000,
+            "threshold_3": 600,
+            "hysterisis_1": 120,
+            "hysterisis_2": 300,
+            "hysterisis_3": 550,
+            "margin": 1000,
             # Detection
             "allowed_ids": set([1, 2, 5, 6, 7, 8, 9, 10]),
             "min_candidate_area": 100,
@@ -98,8 +98,8 @@ class FeederController(QObject):
             "trigger_mode": "both",
             "bg_mode": "With BG",
             # Motor
-            "motor_speed": 1000,
-            "motor_accel": 500,
+            "motor_speed": 3000,
+            "motor_accel": 2000,
             # Recording
             "output_resolution": None,  # (w, h) tuple or None
             # Zone
@@ -406,8 +406,8 @@ class FeederController(QObject):
         """(GUI Thread) Updates motor-related settings."""
         with self.settings_lock:
             try:
-                self.settings["motor_speed"] = int(settings.get("motor_speed", 1000))
-                self.settings["motor_accel"] = int(settings.get("motor_accel", 500))
+                self.settings["motor_speed"] = int(settings.get("motor_speed", 3000))
+                self.settings["motor_accel"] = int(settings.get("motor_accel", 2000))
 
                 self.status_updated.emit(
                     f"Motor settings updated: Speed={self.settings['motor_speed']}, Accel={self.settings['motor_accel']}")
@@ -424,13 +424,13 @@ class FeederController(QObject):
         """(GUI Thread) Updates electrode threshold settings."""
         with self.settings_lock:
             try:
-                self.settings["threshold_1"] = int(settings.get("threshold_1", 512))
-                self.settings["threshold_2"] = int(settings.get("threshold_2", 512))
-                self.settings["threshold_3"] = int(settings.get("threshold_3", 512))
-                self.settings["hysterisis_1"] = int(settings.get("hysterisis_1", 60))
-                self.settings["hysterisis_2"] = int(settings.get("hysterisis_2", 60))
-                self.settings["hysterisis_3"] = int(settings.get("hysterisis_3", 60))
-                self.settings["margin"] = int(settings.get("margin", 50))
+                self.settings["threshold_1"] = int(settings.get("threshold_1", 1500))
+                self.settings["threshold_2"] = int(settings.get("threshold_2", 1000))
+                self.settings["threshold_3"] = int(settings.get("threshold_3", 800))
+                self.settings["hysterisis_1"] = int(settings.get("hysterisis_1", 120))
+                self.settings["hysterisis_2"] = int(settings.get("hysterisis_2", 300))
+                self.settings["hysterisis_3"] = int(settings.get("hysterisis_3", 550))
+                self.settings["margin"] = int(settings.get("margin", 10000))
 
                 self.status_updated.emit(
                     f"Electrode thresholds updated: T1={self.settings['threshold_1']}, T2={self.settings['threshold_2']}, T3={self.settings['threshold_3']}, H1={self.settings['hysterisis_1']}, H2={self.settings['hysterisis_2']}, H3={self.settings['hysterisis_3']}, Margin = {self.settings['margin']}")

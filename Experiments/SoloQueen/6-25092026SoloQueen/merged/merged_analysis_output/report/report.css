@@ -1,0 +1,26 @@
+
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin:0; font-family:Segoe UI, Arial, sans-serif; background:#111827; color:#e5e7eb; }
+header { padding:20px 24px; background:#0f172a; border-bottom:1px solid #1f2937; }
+main { padding:20px 24px; width:100%; }
+.controls { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; align-items:end; }
+.panel { background:#1f2937; border:1px solid #374151; border-radius:14px; padding:16px; margin-bottom:18px; width:100%; }
+.panel h3 { margin:0 0 12px 0; }
+.grid { display:flex; flex-direction:column; gap:18px; width:100%; }
+.grid > .panel { margin-bottom:0; }
+label { display:flex; flex-direction:column; gap:6px; font-size:14px; min-width:220px; }
+select { background:#111827; color:#e5e7eb; border:1px solid #4b5563; border-radius:8px; padding:8px 10px; }
+#summaryCards { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+.card { background:#111827; border:1px solid #374151; border-radius:12px; padding:12px; }
+.metric-label { color:#93c5fd; font-size:13px; }
+.metric-value { font-size:26px; font-weight:700; margin-top:6px; }
+.info-row { display:flex; gap:8px; flex-wrap:wrap; }
+.info-pill { background:#111827; border:1px solid #374151; border-radius:999px; padding:8px 12px; font-size:13px; }
+.chart { min-height:520px; width:100%; }
+#status { font-size:13px; color:#93c5fd; }
+@media (max-width: 900px) {
+  main { padding:16px; }
+  .chart { min-height:400px; }
+  label { min-width:160px; }
+}

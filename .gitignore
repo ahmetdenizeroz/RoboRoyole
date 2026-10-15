@@ -1,9 +1,21 @@
+# Video files (tens of gigabytes)
 *.mp4
-*.png
-*.pyc
 *.mkv
-*.css
-*.html
+
+# Python cache
+*.pyc
+__pycache__/
+
+# Large raw coordinate dumps & tabular data (100MB+)
 *.tsv
-*.js
 *.txt
+
+# Oversized generated data & logs (exceed GitHub's 100MB push limit)
+**/report/data/
+*_interactive.html
+*.mbtree
+*.log
+
+# IDE
+.vscode/
+
